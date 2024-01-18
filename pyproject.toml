@@ -1,0 +1,31 @@
+[project]
+name = "mapc_optimal_research"
+version = "0.1.0"
+description = "Resources for the article on the optimal solution of the IEEE 802.11 MAPC (C-SR) problem"
+
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["802.11", "multi-access point coordination", "optimization"]
+
+authors = [
+  {name = "Maksymilian Wojnar", email = "maksymilian.wojnar@agh.edu.pl"},
+  {name = "Wojciech Ciężobka", email = "wojciech.ciezobka@agh.edu.pl"},
+  {name = "Szymon Szott", email = "szymon.szott@agh.edu.pl"},
+  {name = "Katarzyna Kosek-Szott", email = "katarzyna.kosek-szott@agh.edu.pl"},
+  {name = "Krzysztof Rusek", email = "krzysztof.rusek@agh.edu.pl"},
+  {name = "Piotr Chołda", email = "piotr.cholda@agh.edu.pl"}
+]
+
+requires-python = ">=3.9"
+dependencies = [
+  "chex~=0.1.85",
+  "jax~=0.4.23",
+  "jaxlib~=0.4.23",
+  "mapc-optimal~=0.1.0",
+  "mapc-sim~=0.1.1",
+  "matplotlib~=3.8.2"
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
