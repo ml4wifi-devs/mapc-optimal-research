@@ -141,6 +141,7 @@ if __name__ == '__main__':
     plt.xscale('log')
     plt.xlabel(r'$d$ [m]')
     plt.ylabel('Effective data rate [Mb/s]')
+    plt.ylim(bottom=0)
     plt.legend()
     plt.grid()
     plt.tight_layout()
