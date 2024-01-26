@@ -22,7 +22,7 @@ dependencies = [
   "jax~=0.4.23",
   "jaxlib~=0.4.23",
   "mapc-optimal~=0.1.0",
-  "mapc-sim~=0.1.1",
+  "mapc-sim~=0.1.4",
   "matplotlib~=3.8.2"
 ]
 
