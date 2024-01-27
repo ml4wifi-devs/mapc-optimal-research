@@ -1,7 +1,4 @@
 import os
-
-from mapc_research.plots.utils import confidence_interval
-
 os.environ['JAX_ENABLE_X64'] = "True"
 
 import time
@@ -10,7 +7,6 @@ from itertools import chain
 import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
-from chex import Array, dataclass
 from mapc_optimal import Solver, positions_to_path_loss
 from mapc_sim.constants import DATA_RATES, DEFAULT_SIGMA
 from mapc_sim.sim import network_data_rate
@@ -18,16 +14,11 @@ from tqdm import tqdm
 
 from mapc_research.envs.static_scenarios import *
 from mapc_research.plots import set_style
+from mapc_research.plots.utils import confidence_interval
 
 
 RATE_TO_MCS = dict(zip(DATA_RATES.tolist(), range(len(DATA_RATES))))
-
-
-@dataclass
-class SimulatorConfiguration:
-    tx: Array
-    mcs: Array
-    tx_power: Array
+RATE_TO_MCS[0.] = 0
 
 
 def run_solver(scenario: StaticScenario, obj_filename: str = None, solver_kwargs: dict = None) -> tuple:
@@ -90,7 +81,7 @@ def run_simulation(scenario: StaticScenario, configurations: dict, iters: int = 
             ap = int(link[0].split('_')[1])
             tx_power = tx_power.at[ap].set(power)
 
-        sim_conf.append(SimulatorConfiguration(tx=tx, mcs=mcs, tx_power=tx_power))
+        sim_conf.append(dict(tx=tx, mcs=mcs, tx_power=tx_power))
         sim_conf_prob.append(configurations['shares'][conf])
 
     sim_conf_prob = jnp.cumsum(jnp.asarray(sim_conf_prob), dtype=float)
@@ -100,7 +91,7 @@ def run_simulation(scenario: StaticScenario, configurations: dict, iters: int = 
         sim_key, conf_key, key = jax.random.split(key, 3)
         conf_idx = (sim_conf_prob <= jax.random.uniform(conf_key)).sum()
         conf = sim_conf[conf_idx]
-        results.append(sim_fn(key=sim_key, tx=conf.tx, mcs=conf.mcs, tx_power=conf.tx_power))
+        results.append(sim_fn(key=sim_key, tx=conf['tx'], mcs=conf['mcs'], tx_power=conf['tx_power']))
 
     return results
 
