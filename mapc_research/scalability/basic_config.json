@@ -1,0 +1,12 @@
+{
+    "seed": 42,
+    "n_reps": 5,
+    "min_aps": 2,
+    "max_aps": 32,
+    "step_aps": 2,
+    "log_space": true,
+    "ap_density": 0.04,
+    "n_sta_per_ap": 4,
+    "d_sta": 2,
+    "verbose": false
+}

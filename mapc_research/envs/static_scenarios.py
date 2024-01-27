@@ -348,14 +348,18 @@ def simple_scenario_5(
 
 def random_scenario(
         seed: int,
-        d_ap: Scalar = 100.,
+        d_ap: Optional[Scalar] = 100.,
         n_ap: int = 4,
         d_sta: Scalar = 1.,
         n_sta_per_ap: int = 4,
+        ap_density: Optional[float] = None,
         mcs: int = DEFAULT_MCS,
         tx_power: Scalar = DEFAULT_TX_POWER,
         sigma: Scalar = DEFAULT_SIGMA
 ) -> StaticScenario:
+    assert d_ap is not None or ap_density is not None, 'Either d_ap or ap_density must be specified'
+    if ap_density is not None:
+        d_ap = jnp.sqrt(n_ap / ap_density)  # As AP density is constant, d_ap is proportional to sqrt(n_ap)
     ap_key, key = jax.random.split(jax.random.PRNGKey(seed))
     ap_pos = jax.random.uniform(ap_key, (n_ap, 2)) * d_ap
     sta_pos = []
