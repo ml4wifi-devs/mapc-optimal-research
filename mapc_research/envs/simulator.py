@@ -128,6 +128,15 @@ if __name__ == '__main__':
 
     plt.plot(distances, solver_results, c='C0', label='Solver')
     plt.plot(distances, simulator_mean, c='C1', label='Simulator')
+    if os.path.exists('alignment-distances.npy'):
+        plt.plot(
+            jnp.load('alignment-distances.npy'), 
+            jnp.load('alignment-upper-bound.npy'), c='tab:red', label="Alignment"
+        )
+        plt.plot(
+            jnp.load('alignment-distances.npy'), 
+            jnp.load('alignment-mean-single.npy'), c='tab:gray', label="One AP", linestyle='--'
+        )
     plt.fill_between(distances, simulator_std_low, simulator_std_high, alpha=0.3, color='C1', linewidth=0)
     plt.xscale('log')
     plt.xlabel(r'$d$ [m]')
