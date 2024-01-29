@@ -111,13 +111,16 @@ if __name__ == '__main__':
     simulator_std_high = []
     completed_distances = []
 
-    start = time.time()
+    total_time = 0.
 
     for d in tqdm(distances):
         scenario = scenario_type(d)
 
         try:
+            start = time.time()
             configurations, solver_rate = run_solver(scenario, f'{scenario_name}_obj_{d:.2f}.pdf', solver_kwargs)
+            total_time += time.time() - start
+
             simulator_rate = run_simulation(scenario, configurations)
 
             mean, ci_low, ci_high = confidence_interval(jnp.asarray(simulator_rate))
@@ -129,7 +132,7 @@ if __name__ == '__main__':
         except Exception as e:
             pass
 
-    print(f'Total time: {time.time() - start:.2f} s')
+    print(f'Total solver time: {total_time:.2f} s')
 
     plt.plot(completed_distances, solver_results, c='C0', label='Solver')
     plt.plot(completed_distances, simulator_mean, c='C1', label='Simulator')
