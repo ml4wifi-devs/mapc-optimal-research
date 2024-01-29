@@ -64,7 +64,7 @@ def run_simulation(scenario: StaticScenario, configurations: dict, iters: int = 
     for conf in configurations['shares']:
         tx = jnp.zeros((n_nodes, n_nodes), dtype=float)
 
-        for link in configurations['link_rates'][conf]:
+        for link in configurations['links'][conf]:
             ap = int(link[0].split('_')[1])
             sta = int(link[1].split('_')[1])
             tx = tx.at[ap, sta].set(1.)
@@ -109,35 +109,31 @@ if __name__ == '__main__':
     simulator_mean = []
     simulator_std_low = []
     simulator_std_high = []
+    completed_distances = []
 
     start = time.time()
 
     for d in tqdm(distances):
         scenario = scenario_type(d)
 
-        configurations, solver_rate = run_solver(scenario, f'{scenario_name}_obj_{d:.2f}.pdf', solver_kwargs)
-        simulator_rate = run_simulation(scenario, configurations)
+        try:
+            configurations, solver_rate = run_solver(scenario, f'{scenario_name}_obj_{d:.2f}.pdf', solver_kwargs)
+            simulator_rate = run_simulation(scenario, configurations)
 
-        mean, ci_low, ci_high = confidence_interval(jnp.asarray(simulator_rate))
-        simulator_mean.append(mean)
-        simulator_std_low.append(ci_low)
-        simulator_std_high.append(ci_high)
-        solver_results.append(solver_rate)
+            mean, ci_low, ci_high = confidence_interval(jnp.asarray(simulator_rate))
+            simulator_mean.append(mean)
+            simulator_std_low.append(ci_low)
+            simulator_std_high.append(ci_high)
+            solver_results.append(solver_rate)
+            completed_distances.append(d)
+        except Exception as e:
+            pass
 
     print(f'Total time: {time.time() - start:.2f} s')
 
-    plt.plot(distances, solver_results, c='C0', label='Solver')
-    plt.plot(distances, simulator_mean, c='C1', label='Simulator')
-    if os.path.exists('alignment-distances.npy'):
-        plt.plot(
-            jnp.load('alignment-distances.npy'), 
-            jnp.load('alignment-upper-bound.npy'), c='tab:red', label="Alignment"
-        )
-        plt.plot(
-            jnp.load('alignment-distances.npy'), 
-            jnp.load('alignment-mean-single.npy'), c='tab:gray', label="One AP", linestyle='--'
-        )
-    plt.fill_between(distances, simulator_std_low, simulator_std_high, alpha=0.3, color='C1', linewidth=0)
+    plt.plot(completed_distances, solver_results, c='C0', label='Solver')
+    plt.plot(completed_distances, simulator_mean, c='C1', label='Simulator')
+    plt.fill_between(completed_distances, simulator_std_low, simulator_std_high, alpha=0.3, color='C1', linewidth=0)
     plt.xscale('log')
     plt.xlabel(r'$d$ [m]')
     plt.ylabel('Effective data rate [Mb/s]')
