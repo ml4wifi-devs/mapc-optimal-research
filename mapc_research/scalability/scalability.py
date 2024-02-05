@@ -17,6 +17,7 @@ from argparse import ArgumentParser
 from mapc_research.envs.static_scenarios import *
 from mapc_research.plots import set_style
 from mapc_research.plots.utils import confidence_interval
+from mapc_research.utils import *
 
 
 def measure_point(
@@ -69,6 +70,9 @@ if __name__ == "__main__":
     # Load experiment configuration from config file
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", type=str, required=True)
+    parser.add_argument("-s", "--solver", type=str, default="pulp", choices=["pulp", "copt"])
+    parser.add_argument("-l", "--log-space", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
     experiment_config = json.load(open(args.config, "r"))
 
@@ -76,10 +80,15 @@ if __name__ == "__main__":
     min_aps = experiment_config["min_aps"]
     max_aps = experiment_config["max_aps"]
     step_aps = experiment_config["step_aps"]
-    if experiment_config["log_space"]:
+    if args.log_space:
         aps = jnp.logspace(jnp.log10(min_aps), jnp.log10(max_aps), num=(max_aps-min_aps)//step_aps+1, dtype=int)
     else:
         aps = jnp.linspace(min_aps, max_aps, num=(max_aps-min_aps)//step_aps+1, dtype=int)
+
+    # Define solver kwargs
+    solver_kwargs = {
+        "solver": SOLVERS[args.solver](msg=args.verbose),
+    }
     
     # Iterate over access points and measure exec times
     total_start = time.time()
@@ -100,7 +109,8 @@ if __name__ == "__main__":
             n_reps=experiment_config["n_reps"],
             scenario_config=scenario_config,
             key=jax.random.PRNGKey(experiment_config["seed"]),
-            verbose=experiment_config["verbose"],
+            verbose=args.verbose,
+            solver_kwargs=solver_kwargs
         )
         mean, ci_low, ci_high = confidence_interval(times)
         times_mean.append(mean)
@@ -117,15 +127,16 @@ if __name__ == "__main__":
     plt.figure(figsize=(4,3))
     plt.scatter(aps, times_mean, c="C0", label="Data", marker="x")
     plt.fill_between(aps, times_std_low, times_std_high, color="C0", alpha=0.3)
+    xs = jnp.linspace(aps[0], aps[-1], 100)
     plt.plot(
-        aps, shift + jnp.power(exponent, aps),
+        xs, shift + jnp.power(exponent, xs),
         c="tab:grey", linestyle="--", linewidth=0.5, label=f"Fit"
     )
-    plt.xscale("log" if experiment_config["log_space"] else "linear")
+    plt.yscale("log" if args.log_space else "linear")
     plt.xlabel("Number of access points")
     plt.ylabel("Execution time [s]")
     plt.legend()
     plt.title(f"Total execution time: {total_time:.2f}s\nshift = {shift:.5f}, exponent = {exponent:.5f}")
     plt.tight_layout()
-    plt.savefig(f"scalability-n_reps{experiment_config['n_reps']}.pdf")
+    plt.savefig(f"scalability-{args.solver}-n_reps{experiment_config['n_reps']}.pdf")
 
