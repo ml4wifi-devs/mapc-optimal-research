@@ -1,5 +1,6 @@
+import jax.numpy as jnp
 import matplotlib.pyplot as plt
-import numpy as np
+from chex import Array
 from scipy.stats import t
 
 
@@ -17,7 +18,7 @@ PLOT_PARAMS = {
     'grid.alpha': 0.42,
     'grid.linewidth': 0.5,
     'legend.title_fontsize': 7,
-    'legend.fontsize': 7,
+    'legend.fontsize': 6,
     'lines.linewidth': 1.,
     'lines.markersize': 2,
     'text.usetex': True,
@@ -31,10 +32,10 @@ def set_style() -> None:
 
 
 def get_cmap(n: int) -> plt.cm:
-    return plt.cm.viridis(np.linspace(0., 0.8, n))
+    return plt.cm.viridis(jnp.linspace(0., 0.8, n))
 
 
-def confidence_interval(data: np.ndarray, ci: float = 0.99) -> tuple:
+def confidence_interval(data: Array, ci: float = 0.99) -> tuple:
     measurements = data.shape[0]
     mean = data.mean(axis=0)
     std = data.std(axis=0)
@@ -42,7 +43,7 @@ def confidence_interval(data: np.ndarray, ci: float = 0.99) -> tuple:
     alpha = 1 - ci
     z = t.ppf(1 - alpha / 2, measurements - 1)
 
-    ci_low = mean - z * std / np.sqrt(measurements)
-    ci_high = mean + z * std / np.sqrt(measurements)
+    ci_low = mean - z * std / jnp.sqrt(measurements)
+    ci_high = mean + z * std / jnp.sqrt(measurements)
 
     return mean, ci_low, ci_high
