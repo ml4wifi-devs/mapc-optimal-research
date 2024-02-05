@@ -8,7 +8,7 @@ import numpy as np
 from chex import Array, Scalar
 from mapc_sim.utils import tgax_path_loss as path_loss
 
-from mapc_research.plots.config import get_cmap
+from mapc_research.plots import get_cmap
 
 
 CCA_THRESHOLD = -82.0  # IEEE Std 802.11-2020 (Revision of IEEE Std 802.11-2016), 17.3.10.6: CCA requirements
