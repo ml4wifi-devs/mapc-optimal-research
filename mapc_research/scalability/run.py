@@ -9,14 +9,13 @@ from tqdm import tqdm
 import jax
 import jax.numpy as jnp
 from scipy.optimize import curve_fit
-from chex import  PRNGKey
+from chex import PRNGKey
 import matplotlib.pyplot as plt
 from mapc_optimal import Solver, positions_to_path_loss
 from argparse import ArgumentParser
 
 from mapc_research.envs.static_scenarios import *
-from mapc_research.plots import set_style
-from mapc_research.plots.utils import confidence_interval
+from mapc_research.plots import confidence_interval, set_style
 
 
 def measure_point(
@@ -64,7 +63,9 @@ def measure_point(
 
     return jnp.asarray(times)
 
+
 if __name__ == "__main__":
+    set_style()
 
     # Load experiment configuration from config file
     parser = ArgumentParser()
@@ -128,4 +129,3 @@ if __name__ == "__main__":
     plt.title(f"Total execution time: {total_time:.2f}s\nshift = {shift:.5f}, exponent = {exponent:.5f}")
     plt.tight_layout()
     plt.savefig(f"scalability-n_reps{experiment_config['n_reps']}.pdf")
-

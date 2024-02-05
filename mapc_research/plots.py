@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import t
 
 
 COLUMN_WIDTH = 3.5
@@ -31,3 +32,17 @@ def set_style() -> None:
 
 def get_cmap(n: int) -> plt.cm:
     return plt.cm.viridis(np.linspace(0., 0.8, n))
+
+
+def confidence_interval(data: np.ndarray, ci: float = 0.99) -> tuple:
+    measurements = data.shape[0]
+    mean = data.mean(axis=0)
+    std = data.std(axis=0)
+
+    alpha = 1 - ci
+    z = t.ppf(1 - alpha / 2, measurements - 1)
+
+    ci_low = mean - z * std / np.sqrt(measurements)
+    ci_high = mean + z * std / np.sqrt(measurements)
+
+    return mean, ci_low, ci_high

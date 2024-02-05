@@ -13,8 +13,7 @@ from mapc_sim.sim import network_data_rate
 from tqdm import tqdm
 
 from mapc_research.envs.static_scenarios import *
-from mapc_research.plots import set_style
-from mapc_research.plots.utils import confidence_interval
+from mapc_research.plots import confidence_interval, set_style
 
 
 RATE_TO_MCS = dict(zip(DATA_RATES.tolist(), range(len(DATA_RATES))))
@@ -97,6 +96,8 @@ def run_simulation(scenario: StaticScenario, configurations: dict, iters: int = 
 
 
 if __name__ == '__main__':
+    set_style()
+
     solver_kwargs = {
         'opt_sum': True
     }
