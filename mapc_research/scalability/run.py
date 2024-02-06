@@ -6,7 +6,6 @@ import time
 import json
 from itertools import chain
 from tqdm import tqdm
-from dataclasses import dataclass
 from typing import Dict
 
 import jax
@@ -20,20 +19,7 @@ from argparse import ArgumentParser
 from mapc_research.envs.static_scenarios import *
 from mapc_research.plots import confidence_interval, set_style
 from mapc_research.utils import *
-
-RESULTS_PATH = "mapc_research/scalability/results"
-
-
-@dataclass
-class ExperimentResult:
-    config: dict
-    aps: jnp.ndarray
-    times_mean: jnp.ndarray
-    times_std_low: jnp.ndarray
-    times_std_high: jnp.ndarray
-    total_time: float
-    shift: float
-    exponent: float
+from mapc_research.scalability import *
 
 
 def measure_point(
@@ -146,7 +132,6 @@ def plot_results(experiment_results: ExperimentResult):
 
 
 if __name__ == "__main__":
-    set_style()
 
     # Load experiment configuration from config file
     parser = ArgumentParser()
