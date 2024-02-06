@@ -1,6 +1,7 @@
 import os
 os.environ['JAX_ENABLE_X64'] = "True"
 
+import traceback
 import time
 import json
 from itertools import chain
@@ -59,7 +60,8 @@ def measure_point(
             start = time.time()
             configurations, rate, objectives = solver(path_loss, return_objectives=True)
             times.append(time.time() - start)
-        except:
+        except Exception as e:
+            traceback.print_exc()
             times.append(jnp.nan)
 
     return jnp.asarray(times)
@@ -71,7 +73,7 @@ if __name__ == "__main__":
     # Load experiment configuration from config file
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", type=str, required=True)
-    parser.add_argument("-s", "--solver", type=str, default="pulp", choices=["pulp", "copt"])
+    parser.add_argument("-s", "--solver", type=str, default="pulp", choices=["pulp", "copt", "scip", "glpk", "choco"])
     parser.add_argument("-l", "--log-space", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
