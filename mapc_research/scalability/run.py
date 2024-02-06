@@ -6,6 +6,8 @@ import time
 import json
 from itertools import chain
 from tqdm import tqdm
+from dataclasses import dataclass
+from typing import Dict
 
 import jax
 import jax.numpy as jnp
@@ -18,6 +20,20 @@ from argparse import ArgumentParser
 from mapc_research.envs.static_scenarios import *
 from mapc_research.plots import confidence_interval, set_style
 from mapc_research.utils import *
+
+RESULTS_PATH = "mapc_research/scalability/results"
+
+
+@dataclass
+class ExperimentResult:
+    config: dict
+    aps: jnp.ndarray
+    times_mean: jnp.ndarray
+    times_std_low: jnp.ndarray
+    times_std_high: jnp.ndarray
+    total_time: float
+    shift: float
+    exponent: float
 
 
 def measure_point(
@@ -67,6 +83,68 @@ def measure_point(
     return jnp.asarray(times)
 
 
+def save_checkpoint(aps: jnp.ndarray):
+
+    # Fit exponential curve to times
+    if len(aps) < 3:
+        shift, exponent = jnp.nan, jnp.nan
+    else:
+        (shift, exponent), _ = curve_fit(lambda x, s, e: s + jnp.power(e, x), aps, times_mean)
+
+    # Save results
+    result = ExperimentResult(
+        config=experiment_config,
+        aps=aps,
+        times_mean=jnp.asarray(times_mean),
+        times_std_low=jnp.asarray(times_std_low),
+        times_std_high=jnp.asarray(times_std_high),
+        total_time=total_time,
+        shift=shift,
+        exponent=exponent
+    )
+    save(result, os.path.join(
+        RESULTS_PATH,
+        f"{args.solver.upper()}-max_aps{max_aps}-n_reps{experiment_config['n_reps']}-{opt_task}.pkl"
+    ))
+
+    # Plot results
+    plot_results(result)
+
+def plot_results(experiment_results: ExperimentResult):
+
+    # Unpack results
+    aps = experiment_results.aps
+    times_mean = experiment_results.times_mean
+    times_std_low = experiment_results.times_std_low
+    times_std_high = experiment_results.times_std_high
+    total_time = experiment_results.total_time
+    shift = experiment_results.shift
+    exponent = experiment_results.exponent
+
+    # Define resolution for fitted curve
+    xs = jnp.linspace(aps[0], aps[-1], 100)
+
+    # Plot results
+    set_style()
+    plt.figure(figsize=(4,3))
+    plt.scatter(aps, times_mean, c="C0", label="Data", marker="x")
+    plt.fill_between(aps, times_std_low, times_std_high, color="C0", alpha=0.3)
+    plt.plot(
+        xs, shift + jnp.power(exponent, xs),
+        c="tab:grey", linestyle="--", linewidth=0.5, label=f"Fit"
+    )
+    plt.yscale("log" if args.log_space else "linear")
+    plt.xlabel("Number of access points")
+    plt.ylabel("Execution time [s]")
+    plt.legend()
+    plt.title(f"Total execution time: {total_time:.2f}s\nshift = {shift:.5f}, exponent = {exponent:.5f}")
+    plt.tight_layout()
+    plt.savefig(os.path.join(
+        RESULTS_PATH,
+        f"{args.solver.upper()}-max_aps{max_aps}-n_reps{experiment_config['n_reps']}-{opt_task}.pdf"
+    ))
+
+
 if __name__ == "__main__":
     set_style()
 
@@ -91,14 +169,16 @@ if __name__ == "__main__":
     # Define solver kwargs
     solver_kwargs = {
         "solver": SOLVERS[args.solver](msg=args.verbose),
+        "opt_sum": experiment_config["opt_sum"],
     }
     
     # Iterate over access points and measure exec times
-    total_start = time.time()
+    opt_task = "total_sum" if experiment_config["opt_sum"] else "min_thr"
+    time_start = time.time()
     times_mean = []
     times_std_low = []
     times_std_high = []
-    for n_ap in tqdm(aps):
+    for i, n_ap in enumerate(tqdm(aps), start=1):
         # Define scenario config
         scenario_config = {
             "n_ap": n_ap,
@@ -119,27 +199,8 @@ if __name__ == "__main__":
         times_mean.append(mean)
         times_std_low.append(ci_low)
         times_std_high.append(ci_high)
-    total_time = time.time() - total_start
+        total_time = time.time() - time_start
+        save_checkpoint(aps[:i])
+
+    # Print total execution time
     print(f"Total execution time: {total_time:.2f}s")
-    
-    # Fit exponential curve to times
-    (shift, exponent), _ = curve_fit(lambda x, s, e: s + jnp.power(e, x), aps, times_mean)
-
-    # Plot results
-    set_style()
-    plt.figure(figsize=(4,3))
-    plt.scatter(aps, times_mean, c="C0", label="Data", marker="x")
-    plt.fill_between(aps, times_std_low, times_std_high, color="C0", alpha=0.3)
-    xs = jnp.linspace(aps[0], aps[-1], 100)
-    plt.plot(
-        xs, shift + jnp.power(exponent, xs),
-        c="tab:grey", linestyle="--", linewidth=0.5, label=f"Fit"
-    )
-    plt.yscale("log" if args.log_space else "linear")
-    plt.xlabel("Number of access points")
-    plt.ylabel("Execution time [s]")
-    plt.legend()
-    plt.title(f"Total execution time: {total_time:.2f}s\nshift = {shift:.5f}, exponent = {exponent:.5f}")
-    plt.tight_layout()
-    plt.savefig(f"scalability-{args.solver}-n_reps{experiment_config['n_reps']}.pdf")
-
