@@ -122,31 +122,24 @@ if __name__ == '__main__':
     set_style()
     colors = get_cmap(3)
 
-    # distances = np.logspace(np.log10(4), 2, 100)
-    # scenarios = [simple_scenario_5(d) for d in distances]
-    #
-    # fairness_index_sum = solver_fairness(scenarios, {'opt_sum': True})
-    # fairness_index_min = solver_fairness(scenarios, {'opt_sum': False})
-    # fairness_index_mab = mab_fairness(scenarios, 5, 2000, 42, 1000)
-    #
-    # with open('fairness.json', 'w') as f:
-    #     json.dump({
-    #         'distances': distances.tolist(),
-    #         'fairness_index_sum': fairness_index_sum,
-    #         'fairness_index_min': fairness_index_min,
-    #         'fairness_index_mab': fairness_index_mab
-    #     }, f)
+    distances = np.logspace(np.log10(4), 2, 100)
+    scenarios = [simple_scenario_5(d) for d in distances]
 
-    with open('fairness.json', 'r') as f:
-        data = json.load(f)
-        distances = np.array(data['distances'])
-        fairness_index_sum = data['fairness_index_sum']
-        fairness_index_min = data['fairness_index_min']
-        fairness_index_mab = data['fairness_index_mab']
+    fairness_index_sum = solver_fairness(scenarios, {'opt_sum': True})
+    fairness_index_min = solver_fairness(scenarios, {'opt_sum': False})
+    fairness_index_mab = mab_fairness(scenarios, 5, 2000, 42, 1000)
+
+    with open('fairness.json', 'w') as f:
+        json.dump({
+            'distances': distances.tolist(),
+            'fairness_index_sum': fairness_index_sum,
+            'fairness_index_min': fairness_index_min,
+            'fairness_index_mab': fairness_index_mab
+        }, f)
 
     plt.plot(distances, fairness_index_sum, c=colors[2], label='Solver w/ optimize sum')
     plt.plot(distances, fairness_index_min, c=colors[1], label='Solver w/ optimize min')
-    plt.plot(distances, fairness_index_mab, c=colors[0], label='MAB w/ TS')
+    plt.plot(distances, fairness_index_mab, c=colors[0], label='MAB w/ TS', linestyle='--')
     plt.xscale('log')
     plt.xlabel(r'$d$ [m]')
     plt.xlim((distances.min(), distances.max()))
