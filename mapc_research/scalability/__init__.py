@@ -13,5 +13,5 @@ class ExperimentResult:
     times_std_low: Array
     times_std_high: Array
     total_time: Scalar
-    shift: Scalar
+    scale: Scalar
     exponent: Scalar

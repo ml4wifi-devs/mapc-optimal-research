@@ -64,37 +64,50 @@ def measure_point(
             times.append(time.time() - start)
         except Exception as e:
             traceback.print_exc()
-            times.append(jnp.nan)
 
     return jnp.asarray(times)
 
 
-def save_checkpoint(aps: jnp.ndarray):
+def save_checkpoint(
+        aps: jnp.ndarray,
+        times_mean: jnp.ndarray,
+        times_std_low: jnp.ndarray,
+        times_std_high: jnp.ndarray,
+        total_time: float,
+        opt_task: str = "total_sum",
+        config: Dict = None
+    ):
 
     # Fit exponential curve to times
     if len(aps) < 3:
-        shift, exponent = jnp.nan, jnp.nan
+        scale, exponent = jnp.nan, jnp.nan
     else:
-        (shift, exponent), _ = curve_fit(lambda x, s, e: s + jnp.power(e, x), aps, times_mean)
+        try:
+            (scale, exponent), _ = curve_fit(lambda x, s, e: -s + s*jnp.power(e, x), aps, times_mean)
+        except ValueError:
+            print("ValueError: Unable to fit exponential curve to times. Check if solver is working properly.")
+            scale, exponent = 0., 1.
 
     # Save results
     result = ExperimentResult(
-        config=experiment_config,
+        config=config,
         aps=aps,
         times_mean=jnp.asarray(times_mean),
         times_std_low=jnp.asarray(times_std_low),
         times_std_high=jnp.asarray(times_std_high),
         total_time=total_time,
-        shift=shift,
+        scale=scale,
         exponent=exponent
     )
     save(result, os.path.join(
         RESULTS_PATH,
-        f"{args.solver.upper()}-max_aps{max_aps}-n_reps{experiment_config['n_reps']}-{opt_task}.pkl"
+        f"{args.solver.upper()}-max_aps{config['max_aps']}-n_reps{config['n_reps']}-{opt_task}.pkl"
     ))
 
     # Plot results
-    plot_results(result)
+
+    if len(aps) > 1:
+        plot_results(result)
 
 def plot_results(experiment_results: ExperimentResult):
 
@@ -104,7 +117,7 @@ def plot_results(experiment_results: ExperimentResult):
     times_std_low = experiment_results.times_std_low
     times_std_high = experiment_results.times_std_high
     total_time = experiment_results.total_time
-    shift = experiment_results.shift
+    scale = experiment_results.scale
     exponent = experiment_results.exponent
 
     # Define resolution for fitted curve
@@ -116,14 +129,14 @@ def plot_results(experiment_results: ExperimentResult):
     plt.scatter(aps, times_mean, c="C0", label="Data", marker="x")
     plt.fill_between(aps, times_std_low, times_std_high, color="C0", alpha=0.3)
     plt.plot(
-        xs, shift + jnp.power(exponent, xs),
+        xs, -scale + scale*jnp.power(exponent, xs),
         c="tab:grey", linestyle="--", linewidth=0.5, label=f"Fit"
     )
     plt.yscale("log" if args.log_space else "linear")
     plt.xlabel("Number of access points")
     plt.ylabel("Execution time [s]")
     plt.legend()
-    plt.title(f"Total execution time: {total_time:.2f}s\nshift = {shift:.5f}, exponent = {exponent:.5f}")
+    plt.title(f"Total execution time: {total_time:.2f}s\nscale = {scale:.5f}, exponent = {exponent:.5f}")
     plt.tight_layout()
     plt.savefig(os.path.join(
         RESULTS_PATH,
@@ -136,7 +149,7 @@ if __name__ == "__main__":
     # Load experiment configuration from config file
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", type=str, required=True)
-    parser.add_argument("-s", "--solver", type=str, default="pulp", choices=["pulp", "copt", "scip", "glpk", "choco"])
+    parser.add_argument("-s", "--solver", type=str, default="pulp", choices=SOLVERS.keys())
     parser.add_argument("-l", "--log-space", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
@@ -160,9 +173,9 @@ if __name__ == "__main__":
     # Iterate over access points and measure exec times
     opt_task = "total_sum" if experiment_config["opt_sum"] else "min_thr"
     time_start = time.time()
-    times_mean = []
-    times_std_low = []
-    times_std_high = []
+    times_mean = jnp.zeros(len(aps))
+    times_std_low = jnp.zeros(len(aps))
+    times_std_high = jnp.zeros(len(aps))
     for i, n_ap in enumerate(tqdm(aps), start=1):
         # Define scenario config
         scenario_config = {
@@ -180,12 +193,26 @@ if __name__ == "__main__":
             verbose=args.verbose,
             solver_kwargs=solver_kwargs
         )
-        mean, ci_low, ci_high = confidence_interval(times)
-        times_mean.append(mean)
-        times_std_low.append(ci_low)
-        times_std_high.append(ci_high)
         total_time = time.time() - time_start
-        save_checkpoint(aps[:i])
+
+        # Update times
+        mean, ci_low, ci_high = confidence_interval(times)
+        times_mean = times_mean.at[i - 1].set(mean.squeeze())
+        times_std_low = times_std_low.at[i - 1].set(ci_low.squeeze())
+        times_std_high = times_std_high.at[i - 1].set(ci_high.squeeze())
+        
+        # Save checkpoint with filtered data
+        mask = times_std_low > 0
+        print(mask)
+        save_checkpoint(
+            aps=aps[mask],
+            times_mean=times_mean[mask],
+            times_std_low=times_std_low[mask],
+            times_std_high=times_std_high[mask],
+            total_time=total_time,
+            opt_task=opt_task,
+            config=experiment_config
+        )
 
     # Print total execution time
     print(f"Total execution time: {total_time:.2f}s")

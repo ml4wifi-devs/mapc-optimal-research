@@ -8,7 +8,9 @@ SOLVERS = {
     "copt": COPT_DLL,
     "scip": plp.SCIP_CMD,
     "glpk": plp.GLPK_CMD,
-    "choco": plp.CHOCO_CMD
+    "choco": plp.CHOCO_CMD,
+    "gurobi": plp.GUROBI_CMD,
+    "cplex": plp.CPLEX_CMD
 }
 
 
