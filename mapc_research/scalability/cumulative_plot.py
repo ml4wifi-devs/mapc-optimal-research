@@ -1,4 +1,5 @@
 from typing import Dict
+from argparse import ArgumentParser
 
 import os
 import jax
@@ -21,7 +22,7 @@ STYLE_MAP = {
 }
 
 
-def plot_cumulative(results: Dict[str, ExperimentResult], title: str = None):
+def plot_cumulative(results: Dict[str, ExperimentResult], log: bool = False):
 
     # Set plot style
     set_style()
@@ -38,11 +39,11 @@ def plot_cumulative(results: Dict[str, ExperimentResult], title: str = None):
         opt_task = key.split("-")[-1]
         
         # Get exponential fit
-        shift, exponent = result.shift, result.exponent
+        scale, exponent = result.scale, result.exponent
 
         # Generate data
         xs = jnp.linspace(1, result.aps[-1], 100)
-        ys = shift + jnp.power(exponent, xs)
+        ys = -scale + scale * jnp.power(exponent, xs)
 
         # Plot data
         label = f"{solver}, {opt_task}, O({exponent:.3f}**n)"
@@ -51,11 +52,15 @@ def plot_cumulative(results: Dict[str, ExperimentResult], title: str = None):
     plt.legend()
     plt.xlabel("Number of APs")
     plt.ylabel("Execution time [s]")
-    # plt.yscale("log")
+    plt.yscale("log" if log else "linear")
     plt.tight_layout()
     plt.savefig("cumulative_plot.pdf")
 
 if __name__ == "__main__":
+
+    parser = ArgumentParser()
+    parser.add_argument("-l", "--log-space", action="store_true")
+    args = parser.parse_args()
     
     # Load results
     results = os.listdir(RESULTS_PATH)
@@ -63,4 +68,4 @@ if __name__ == "__main__":
     results = {file.split(".")[0]: load(os.path.join(RESULTS_PATH, file)) for file in results}
 
     # Plot cumulative time
-    plot_cumulative(results, title="Scalability Experiments")
+    plot_cumulative(results, log=args.log_space)

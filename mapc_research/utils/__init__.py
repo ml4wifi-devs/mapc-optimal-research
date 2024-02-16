@@ -10,7 +10,8 @@ SOLVERS = {
     "glpk": plp.GLPK_CMD,
     "choco": plp.CHOCO_CMD,
     "gurobi": plp.GUROBI_CMD,
-    "cplex": plp.CPLEX_CMD
+    "cplex": plp.CPLEX_CMD,
+    "highs": plp.HiGHS_CMD
 }
 
 

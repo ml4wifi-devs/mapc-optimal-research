@@ -159,14 +159,11 @@ if __name__ == "__main__":
     min_aps = experiment_config["min_aps"]
     max_aps = experiment_config["max_aps"]
     step_aps = experiment_config["step_aps"]
-    if args.log_space:
-        aps = jnp.logspace(jnp.log10(min_aps), jnp.log10(max_aps), num=(max_aps-min_aps)//step_aps+1, dtype=int)
-    else:
-        aps = jnp.linspace(min_aps, max_aps, num=(max_aps-min_aps)//step_aps+1, dtype=int)
+    aps = jnp.linspace(min_aps, max_aps, num=(max_aps-min_aps)//step_aps+1, dtype=int)
 
     # Define solver kwargs
     solver_kwargs = {
-        "solver": SOLVERS[args.solver](msg=args.verbose),
+        "solver": SOLVERS[args.solver](msg=args.verbose, mip=True),
         "opt_sum": experiment_config["opt_sum"],
     }
     
@@ -203,7 +200,6 @@ if __name__ == "__main__":
         
         # Save checkpoint with filtered data
         mask = times_std_low > 0
-        print(mask)
         save_checkpoint(
             aps=aps[mask],
             times_mean=times_mean[mask],
