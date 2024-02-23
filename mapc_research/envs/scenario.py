@@ -1,8 +1,8 @@
 import string
 from abc import ABC, abstractmethod
+from itertools import chain, product
 from typing import Dict, Optional
 
-import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
 from chex import Array, Scalar
@@ -22,21 +22,57 @@ class Scenario(ABC):
     ----------
     associations: Dict
         Dictionary of associations between access points and stations.
+    pos: Array
+        Two dimensional array of node positions. Each row corresponds to X and Y coordinates of a node.
     walls: Optional[Array]
-        Adjacency matrix of walls. Each entry corresponds to a node.
+        Matrix counting the walls between each pair of nodes.
     walls_pos: Optional[Array]
-        Two dimensional array of wall positions. Each row corresponds to X and Y coordinates of a wall.
+        Two dimensional array of wall positions. Each row corresponds to the X and Y coordinates of
+        the wall start and end points.
     """
 
-    def __init__(self, associations: Dict, walls: Optional[Array] = None, walls_pos: Optional[Array] = None) -> None:
-        n_nodes = len(associations) + sum([len(n) for n in associations.values()])
+    def __init__(
+            self,
+            associations: Dict,
+            pos: Array,
+            walls: Optional[Array] = None,
+            walls_pos: Optional[Array] = None
+    ) -> None:
         self.associations = associations
-        self.walls = walls if walls is not None else jnp.zeros((n_nodes, n_nodes))
-        self.walls_pos = walls_pos
+        self.pos = pos
+        self.walls_pos = walls_pos if walls_pos is not None else []
+        self.walls = walls if walls is not None else self._calculate_walls_matrix()
 
     @abstractmethod
     def __call__(self, *args, **kwargs) -> Scalar:
         pass
+
+    def _calculate_walls_matrix(self) -> Array:
+        """
+        Converts a list of wall positions to a matrix counting the walls between each pair of nodes.
+
+        Returns
+        -------
+        Array
+            Matrix counting the walls between each pair of nodes.
+        """
+
+        def det(a, b, c):
+            return (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])
+
+        def intersect(a, b, c, d):
+            return det(a, b, c) * det(a, b, d) < 0 and det(a, c, d) * det(b, c, d) < 0
+
+        nodes = list(self.associations.keys()) + list(chain.from_iterable(self.associations.values()))
+        walls = np.zeros((len(nodes), len(nodes)), dtype=np.float32)
+
+        for wall in self.walls_pos:
+            for node_a, node_b in product(nodes, nodes):
+                if node_a > node_b and intersect(self.pos[node_a], self.pos[node_b], wall[:2], wall[2:]):
+                    walls[node_a, node_b] += 1
+                    walls[node_b, node_a] += 1
+
+        return walls
 
     def get_associations(self) -> Dict:
         return self.associations
@@ -57,9 +93,8 @@ class Scenario(ABC):
             ax.add_patch(circle)
 
         # Plot walls
-        if self.walls_pos is not None:
-            for wall in self.walls_pos:
-                ax.plot([wall[0], wall[2]], [wall[1], wall[3]], color='black', linewidth=1)
+        for wall in self.walls_pos:
+            ax.plot([wall[0], wall[2]], [wall[1], wall[3]], color='black', linewidth=1)
 
         ax.set_axisbelow(True)
         ax.set_xlabel('X [m]')
@@ -106,7 +141,7 @@ class Scenario(ABC):
 
         return np.all(signal_power > CCA_THRESHOLD)
 
-    def tx_matrix_to_action(self, tx_matrix: Array) -> Array:
+    def tx_matrix_to_action(self, tx_matrix: Array) -> list:
         """
         Convert a transmission matrix to a list of transmissions. Assumes downlink.
 
@@ -117,7 +152,7 @@ class Scenario(ABC):
 
         Returns
         -------
-        Array
+        list
             A list, where each entry is either one element list of the AP->STA transmission or an empty one.
         """
 
@@ -125,7 +160,7 @@ class Scenario(ABC):
         action = [[] for _ in aps]
 
         for ap in aps:
-            assert jnp.sum(tx_matrix[ap, :]) <= 1, 'Multiple transmissions at AP'
+            assert np.sum(tx_matrix[ap, :]) <= 1, 'Multiple transmissions at AP'
             for sta in self.associations[ap]:
                 if tx_matrix[ap, sta]:
                     action[ap].append(sta)
