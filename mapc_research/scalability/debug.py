@@ -16,7 +16,8 @@ SOLVERS = {
     "choco": plp.CHOCO_CMD,
     "gurobi": plp.GUROBI_CMD,
     "cplex": plp.CPLEX_CMD,
-    "highs": plp.HiGHS_CMD
+    "highs": plp.HiGHS_CMD,
+    "coin": plp.COIN_CMD,
 }
 
 
@@ -37,8 +38,8 @@ def example(solver):
     prob += 1.2*x + 1.8*y + 2.1*z, "obj"
 
     # Solve problem
-    prob.solve(solver())
-    # options=[("DualReductions", 0), ("QCPDual", 1)]
+    gurobi_options=[("PreDual", 2), ("QCPDual", 1)]
+    prob.solve(solver(keepFiles=True))
 
     # Print solution
     print("\nOptimization status:", plp.LpStatus[prob.status])
@@ -50,7 +51,12 @@ def example(solver):
     
     print("\nConstraints:")
     for name, c in prob.constraints.items():
-        print(name, ":", c, "pi =", c.pi)
+        print(name, ":", c, "pi =", c.pi, "slack =", c.slack)
+
+        # Print all attributes of the constraint
+        # print("\n  Attributes of constraint:")
+        # for attr in dir(c):
+        #     print(attr, ":", getattr(c, attr))
 
 
 if __name__ == "__main__":
