@@ -18,9 +18,10 @@ PLOT_PARAMS = {
     'grid.alpha': 0.42,
     'grid.linewidth': 0.5,
     'legend.title_fontsize': 7,
-    'legend.fontsize': 6,
+    'legend.fontsize': 5.5,
     'lines.linewidth': 1.,
     'lines.markersize': 2,
+    'patch.linewidth': 0.5,
     'text.usetex': True,
     'xtick.major.width': 0.5,
     'ytick.major.width': 0.5,
@@ -32,7 +33,7 @@ def set_style() -> None:
 
 
 def get_cmap(n: int) -> plt.cm:
-    return plt.cm.viridis(jnp.linspace(0., 0.8, n))
+    return plt.cm.viridis(jnp.linspace(0., 0.75, n))
 
 
 def confidence_interval(data: Array, ci: float = 0.99) -> tuple:

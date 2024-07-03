@@ -1,4 +1,5 @@
 from functools import partial
+from itertools import product
 from typing import Dict, Optional
 
 import jax
@@ -31,7 +32,7 @@ class StaticScenario(Scenario):
     associations: Dict
         Dictionary of associations between access points and stations.
     walls: Optional[Array]
-        Adjacency matrix of walls. Each entry corresponds to a node.
+        Matrix counting the walls between each pair of nodes.
     walls_pos: Optional[Array]
         Two dimensional array of wall positions. Each row corresponds to X and Y coordinates of a wall.
     """
@@ -46,10 +47,10 @@ class StaticScenario(Scenario):
             walls: Optional[Array] = None,
             walls_pos: Optional[Array] = None
     ) -> None:
-        super().__init__(associations, walls, walls_pos)
+        super().__init__(associations, pos, walls, walls_pos)
 
         self.pos = pos
-        self.mcs = jnp.ones(pos.shape[0], dtype=jnp.int32) * mcs
+        self.mcs = jnp.full(pos.shape[0], mcs, dtype=jnp.int32)
         self.tx_power = jnp.ones(pos.shape[0]) * tx_power
 
         self.data_rate_fn = jax.jit(partial(
@@ -374,3 +375,30 @@ def random_scenario(
     associations = {i: list(range(n_ap + i * n_sta_per_ap, n_ap + (i + 1) * n_sta_per_ap)) for i in range(n_ap)}
 
     return StaticScenario(pos, mcs, tx_power, sigma, associations)
+
+
+def residential_scenario(
+        seed: int,
+        x_apartments: int = 4,
+        y_apartments: int = 4,
+        n_sta_per_ap: int = 4,
+        size: Scalar = 10.,
+        mcs: int = DEFAULT_MCS,
+        tx_power: Scalar = DEFAULT_TX_POWER,
+        sigma: Scalar = DEFAULT_SIGMA
+) -> StaticScenario:
+    key = jax.random.PRNGKey(seed)
+    associations, pos, walls_pos = {}, [], []
+
+    for i, j in product(range(x_apartments), range(y_apartments)):
+        associations[len(pos)] = list(range(len(pos) + 1, len(pos) + n_sta_per_ap + 1))
+        walls_pos.append([i * size, j * size, (i + 1) * size, j * size])
+        walls_pos.append([i * size, j * size, i * size, (j + 1) * size])
+
+        pos_key, key = jax.random.split(key)
+        pos += (jax.random.uniform(pos_key, (n_sta_per_ap + 1, 2)) * size + jnp.array([i * size, j * size])).tolist()
+
+    walls_pos.append([x_apartments * size, 0, x_apartments * size, y_apartments * size])
+    walls_pos.append([0, y_apartments * size, x_apartments * size, y_apartments * size])
+
+    return StaticScenario(jnp.array(pos), mcs, tx_power, sigma, associations, walls_pos=jnp.array(walls_pos))
