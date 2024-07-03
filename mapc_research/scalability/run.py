@@ -40,7 +40,7 @@ def measure_point(
         scenario_config["seed"] = seeds[i]
 
         # Create scenario
-        scenario = random_scenario(**scenario_config)
+        scenario = residential_scenario(**scenario_config)
         if verbose:
             scenario.plot()
 
@@ -101,7 +101,7 @@ def save_checkpoint(
     )
     save(result, os.path.join(
         RESULTS_PATH,
-        f"{args.solver.upper()}-max_aps{config['max_aps']}-n_reps{config['n_reps']}-{opt_task}.pkl"
+        f"{args.solver.upper()}-residential-n_reps{config['n_reps']}-{opt_task}.pkl"
     ))
 
     # Plot results
@@ -121,7 +121,7 @@ def plot_results(experiment_results: ExperimentResult):
     exponent = experiment_results.exponent
 
     # Define resolution for fitted curve
-    xs = jnp.linspace(aps[0], aps[-1], 100)
+    xs = jnp.linspace(0, aps[-1], 100)
 
     # Plot results
     set_style()
@@ -140,7 +140,7 @@ def plot_results(experiment_results: ExperimentResult):
     plt.tight_layout()
     plt.savefig(os.path.join(
         RESULTS_PATH,
-        f"{args.solver.upper()}-max_aps{max_aps}-n_reps{experiment_config['n_reps']}-{opt_task}.pdf"
+        f"{args.solver.upper()}-residential-n_reps{experiment_config['n_reps']}-{opt_task}.pdf"
     ))
 
 
@@ -156,10 +156,7 @@ if __name__ == "__main__":
     experiment_config = json.load(open(args.config, "r"))
 
     # Define range of access points
-    min_aps = experiment_config["min_aps"]
-    max_aps = experiment_config["max_aps"]
-    step_aps = experiment_config["step_aps"]
-    aps = jnp.linspace(min_aps, max_aps, num=(max_aps-min_aps)//step_aps+1, dtype=int)
+    aps = jnp.array([x * y for x, y in zip(experiment_config["x_apartments"], experiment_config["y_apartments"])])
 
     # Define solver kwargs
     solver_kwargs = {
@@ -176,10 +173,10 @@ if __name__ == "__main__":
     for i, n_ap in enumerate(tqdm(aps), start=1):
         # Define scenario config
         scenario_config = {
-            "n_ap": n_ap,
-            "d_sta": experiment_config["d_sta"],
+            "x_apartments": experiment_config["x_apartments"][i - 1],
+            "y_apartments": experiment_config["y_apartments"][i - 1],
             "n_sta_per_ap": experiment_config["n_sta_per_ap"],
-            "ap_density": experiment_config["ap_density"]
+            "size": experiment_config["size"],
         }
 
         # Measure exec time
@@ -199,7 +196,7 @@ if __name__ == "__main__":
         times_std_high = times_std_high.at[i - 1].set(ci_high.squeeze())
         
         # Save checkpoint with filtered data
-        mask = times_std_low > 0
+        mask = times_mean != 0
         save_checkpoint(
             aps=aps[mask],
             times_mean=times_mean[mask],
