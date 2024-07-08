@@ -84,8 +84,8 @@ def save_checkpoint(
     else:
         try:
             (scale, exponent), _ = curve_fit(lambda x, s, e: -s + s*jnp.power(e, x), aps, times_mean)
-        except ValueError:
-            print("ValueError: Unable to fit exponential curve to times. Check if solver is working properly.")
+        except Exception as e:
+            print(f"{e}: Unable to fit exponential curve to times.")
             scale, exponent = 0., 1.
 
     # Save results
