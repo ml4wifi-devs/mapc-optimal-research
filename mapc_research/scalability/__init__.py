@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression, TheilSenRegressor
 
 from mapc_research.plots import confidence_interval, set_style, get_cmap
 
@@ -16,6 +17,8 @@ COLOR_MAP = {
     "CBC": CMAP[0],
     "CPLEX": CMAP[2],
 }
+QUANTILE = 0.9
+CONFIDENCE_INTERVAL = 0.95
 
 
 def create_db(name: str) -> str:
@@ -32,28 +35,44 @@ def create_db(name: str) -> str:
 
     return path
 
-def plot_results(df: pd.DataFrame, n_aps_threshold: int, save_path: str, log_space: bool = True, std_dev: bool = False):
+def plot_results(df: pd.DataFrame, n_aps_threshold: int, save_path: str, uncertainty: str = "quantile", with_outliers: bool = False):
 
     # Unpack results
     aps = df["n_aps"].unique()
-    times_mean = df.groupby('n_aps').mean().reset_index()["time"].values
+    times_median = df.groupby('n_aps').median().reset_index()["time"].values
     times_count = df.groupby('n_aps').count().reset_index()["time"].values
     mask = times_count > 4
 
-    if std_dev == False:
-        # Calculate confidence intervals
-        times_ci_low = df.groupby('n_aps').apply(lambda x: confidence_interval(x, ci=0.95)[1])["time"].values
-        times_ci_high = df.groupby('n_aps').apply(lambda x: confidence_interval(x, ci=0.95)[2])["time"].values
-    else:
+    # Calculate uncertainty
+    if uncertainty == "quantile":
+        # Calculate quantiles
+        times_low = df.groupby('n_aps').apply(lambda x: x.quantile(1 - QUANTILE))["time"].values
+        times_high = df.groupby('n_aps').apply(lambda x: x.quantile(QUANTILE))["time"].values
+    elif uncertainty == "std":
         # Alternative: Use standard deviation
-        times_ci_low = df.groupby('n_aps').apply(lambda x: x.mean(axis=0) - x.std(axis=0))["time"].values
-        times_ci_high = df.groupby('n_aps').apply(lambda x: x.mean(axis=0) + x.std(axis=0))["time"].values
+        times_low = df.groupby('n_aps').apply(lambda x: x.mean(axis=0) - x.std(axis=0))["time"].values
+        times_high = df.groupby('n_aps').apply(lambda x: x.mean(axis=0) + x.std(axis=0))["time"].values
+    elif uncertainty == "ci":
+        # Alternative: Use confidence intervals
+        times_low = df.groupby('n_aps').apply(lambda x: confidence_interval(x, ci=CONFIDENCE_INTERVAL)[1])["time"].values
+        times_high = df.groupby('n_aps').apply(lambda x: confidence_interval(x, ci=CONFIDENCE_INTERVAL)[2])["time"].values
+    else:
+        raise ValueError("Invalid uncertainty type, choose from 'quantile', 'std', 'ci'")
+    
+    # Find outliers (outside times_low and times_high)
+    outliers = ([], [])
+    for n_aps, low, high in zip(aps[mask], times_low[mask], times_high[mask]):
+        outliers_mask = (df["n_aps"] == n_aps) & ((df["time"] < low) | (df["time"] > high))
+        outliers[0].extend(df[outliers_mask]["n_aps"].values)
+        outliers[1].extend(df[outliers_mask]["time"].values)
 
     # Fit curve
+    model = TheilSenRegressor()
     df_fitted = df[df["n_aps"] >= n_aps_threshold]
-    aps_fitted = df_fitted["n_aps"].unique()
-    times_fitted = df_fitted.groupby('n_aps').mean().reset_index()["time"].values
-    a, b = jnp.polyfit(aps_fitted.astype(float), jnp.log(times_fitted), 1)
+    aps_fitted = df_fitted["n_aps"].values
+    times_fitted = df_fitted["time"].values
+    model.fit(aps_fitted.reshape(-1, 1), jnp.log(times_fitted))
+    a, b = model.coef_[0], model.intercept_
     scale, exponent = jnp.exp(b), jnp.exp(a)
 
     # Define resolution for fitted curve
@@ -62,13 +81,14 @@ def plot_results(df: pd.DataFrame, n_aps_threshold: int, save_path: str, log_spa
     # Plot results
     set_style()
     plt.figure(figsize=(4,3))
-    plt.scatter(aps, times_mean, c="C0", label="Data", marker="x")
-    plt.fill_between(aps[mask], times_ci_low[mask], times_ci_high[mask], color="C0", alpha=0.3)
+    plt.scatter(aps, times_median, color="C0", label="Data", marker="x")
+    plt.scatter(outliers[0], outliers[1], color="C0", marker=".") if with_outliers else None
+    plt.fill_between(aps[mask], times_low[mask], times_high[mask], color="C0", alpha=0.3)
     plt.plot(
         xs, scale*jnp.power(exponent, xs),
-        c="tab:grey", linestyle="--", linewidth=0.5, label=f"Fit"
+        color="tab:grey", linestyle="--", linewidth=0.5, label=f"Fit"
     )
-    plt.yscale("log" if log_space else "linear")
+    plt.yscale("log")
     plt.xticks(list(range(0, 17, 2)))
     plt.xlabel("Number of access points")
     plt.ylabel("Execution time [s]")
@@ -78,7 +98,7 @@ def plot_results(df: pd.DataFrame, n_aps_threshold: int, save_path: str, log_spa
     plt.savefig(save_path)
 
 
-def plot_combined(dfs: List[pd.DataFrame], labels: List[str], n_aps_thresholds: List[int], save_path: str, log_space: bool = True, std_dev: bool = False):
+def plot_combined(dfs: List[pd.DataFrame], labels: List[str], n_aps_thresholds: List[int], save_path: str, uncertainty: str = "quantile", with_outliers: bool = False):
 
     # Setup figure
     set_style()
@@ -88,38 +108,55 @@ def plot_combined(dfs: List[pd.DataFrame], labels: List[str], n_aps_thresholds: 
 
         # Unpack results
         aps = df["n_aps"].unique()
-        times_mean = df.groupby('n_aps').mean().reset_index()["time"].values
+        times_median = df.groupby('n_aps').median().reset_index()["time"].values
         times_count = df.groupby('n_aps').count().reset_index()["time"].values
         mask = times_count > 4
 
-        if std_dev == False:
-            # Calculate confidence intervals
-            times_ci_low = df.groupby('n_aps').apply(lambda x: confidence_interval(x, ci=0.95)[1])["time"].values
-            times_ci_high = df.groupby('n_aps').apply(lambda x: confidence_interval(x, ci=0.95)[2])["time"].values
-        else:
+            # Calculate uncertainty
+        if uncertainty == "quantile":
+            # Calculate quantiles
+            times_low = df.groupby('n_aps').apply(lambda x: x.quantile(1 - QUANTILE))["time"].values
+            times_high = df.groupby('n_aps').apply(lambda x: x.quantile(QUANTILE))["time"].values
+        elif uncertainty == "std":
             # Alternative: Use standard deviation
-            times_ci_low = df.groupby('n_aps').apply(lambda x: x.mean(axis=0) - x.std(axis=0))["time"].values
-            times_ci_high = df.groupby('n_aps').apply(lambda x: x.mean(axis=0) + x.std(axis=0))["time"].values
+            times_low = df.groupby('n_aps').apply(lambda x: x.mean(axis=0) - x.std(axis=0))["time"].values
+            times_high = df.groupby('n_aps').apply(lambda x: x.mean(axis=0) + x.std(axis=0))["time"].values
+        elif uncertainty == "ci":
+            # Alternative: Use confidence intervals
+            times_low = df.groupby('n_aps').apply(lambda x: confidence_interval(x, ci=CONFIDENCE_INTERVAL)[1])["time"].values
+            times_high = df.groupby('n_aps').apply(lambda x: confidence_interval(x, ci=CONFIDENCE_INTERVAL)[2])["time"].values
+        else:
+            raise ValueError("Invalid uncertainty type, choose from 'quantile', 'std', 'ci'")
+        
+        # Find outliers (outside times_low and times_high)
+        outliers = ([], [])
+        for n_aps, low, high in zip(aps[mask], times_low[mask], times_high[mask]):
+            outliers_mask = (df["n_aps"] == n_aps) & ((df["time"] < low) | (df["time"] > high))
+            outliers[0].extend(df[outliers_mask]["n_aps"].values)
+            outliers[1].extend(df[outliers_mask]["time"].values)
 
         # Fit curve
+        model = TheilSenRegressor()
         df_fitted = df[df["n_aps"] >= n_aps_threshold]
-        aps_fitted = df_fitted["n_aps"].unique()
-        times_fitted = df_fitted.groupby('n_aps').mean().reset_index()["time"].values
-        a, b = jnp.polyfit(aps_fitted.astype(float), jnp.log(times_fitted), 1)
+        aps_fitted = df_fitted["n_aps"].values
+        times_fitted = df_fitted["time"].values
+        model.fit(aps_fitted.reshape(-1, 1), jnp.log(times_fitted))
+        a, b = model.coef_[0], model.intercept_
         scale, exponent = jnp.exp(b), jnp.exp(a)
 
         # Define resolution for fitted curve
         xs = jnp.linspace(0, aps[-1], 100)
 
         # Plot results
-        plt.scatter(aps, times_mean, marker="x", label=label, color=COLOR_MAP[label])
-        plt.fill_between(aps[mask], times_ci_low[mask], times_ci_high[mask], alpha=0.3, color=COLOR_MAP[label])
+        plt.scatter(aps, times_median, marker="x", label=label, color=COLOR_MAP[label])
+        plt.scatter(outliers[0], outliers[1], color=COLOR_MAP[label], marker=".") if with_outliers else None
+        plt.fill_between(aps[mask], times_low[mask], times_high[mask], alpha=0.3, color=COLOR_MAP[label])
         plt.plot(
             xs, scale*jnp.power(exponent, xs),
-            c="tab:grey", linestyle="--", linewidth=0.5, label=f"Fit" if label == labels[-1] else None
+            color="tab:grey", linestyle="--", linewidth=0.5, label=f"Fit" if label == labels[-1] else None
         )
     
-    plt.yscale("log" if log_space else "linear")
+    plt.yscale("log")
     plt.xticks(list(range(0, 17, 2)))
     plt.xlabel("Number of access points")
     plt.ylabel("Execution time [s]")
