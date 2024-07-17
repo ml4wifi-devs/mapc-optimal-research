@@ -59,9 +59,12 @@ def plot_results(df: pd.DataFrame, n_aps_threshold: int, save_path: str, uncerta
     else:
         raise ValueError("Invalid uncertainty type, choose from 'quantile', 'std', 'ci'")
     
-    # Find outliers (outside times_low and times_high)
+    # Find IQR, whiskers and outliers
+    iqr = times_high - times_low
+    whiskers_low = times_low - 1.5*iqr
+    whiskers_high = times_high + 1.5*iqr
     outliers = ([], [])
-    for n_aps, low, high in zip(aps[mask], times_low[mask], times_high[mask]):
+    for n_aps, low, high in zip(aps[mask], whiskers_low[mask], whiskers_high[mask]):
         outliers_mask = (df["n_aps"] == n_aps) & ((df["time"] < low) | (df["time"] > high))
         outliers[0].extend(df[outliers_mask]["n_aps"].values)
         outliers[1].extend(df[outliers_mask]["time"].values)
@@ -79,11 +82,16 @@ def plot_results(df: pd.DataFrame, n_aps_threshold: int, save_path: str, uncerta
     xs = jnp.linspace(0, aps[-1], 100)
 
     # Plot results
-    set_style()
-    plt.figure(figsize=(4,3))
-    plt.scatter(aps, times_median, color="C0", label="Data", marker="x")
+    label = "Data"
+        # Median
+    plt.scatter(aps, times_median, marker="_", label=label, color="C0", s=20, linewidths=0.5)
+        # Quantiles
+    plt.fill_between(aps[mask], times_low[mask], times_high[mask], alpha=0.3, color="C0")
+        # Whiskers
+    # plt.scatter(aps[mask], whiskers_low[mask], color=COLOR_MAP[label], marker="_")
+    # plt.scatter(aps[mask], whiskers_high[mask], color=COLOR_MAP[label], marker="_")
+        # Outliers
     plt.scatter(outliers[0], outliers[1], color="C0", marker=".") if with_outliers else None
-    plt.fill_between(aps[mask], times_low[mask], times_high[mask], color="C0", alpha=0.3)
     plt.plot(
         xs, scale*jnp.power(exponent, xs),
         color="tab:grey", linestyle="--", linewidth=0.5, label=f"Fit"
@@ -128,9 +136,12 @@ def plot_combined(dfs: List[pd.DataFrame], labels: List[str], n_aps_thresholds: 
         else:
             raise ValueError("Invalid uncertainty type, choose from 'quantile', 'std', 'ci'")
         
-        # Find outliers (outside times_low and times_high)
+        # Find IQR, whiskers and outliers
+        iqr = times_high - times_low
+        whiskers_low = times_low - 1.5*iqr
+        whiskers_high = times_high + 1.5*iqr
         outliers = ([], [])
-        for n_aps, low, high in zip(aps[mask], times_low[mask], times_high[mask]):
+        for n_aps, low, high in zip(aps[mask], whiskers_low[mask], whiskers_high[mask]):
             outliers_mask = (df["n_aps"] == n_aps) & ((df["time"] < low) | (df["time"] > high))
             outliers[0].extend(df[outliers_mask]["n_aps"].values)
             outliers[1].extend(df[outliers_mask]["time"].values)
@@ -148,9 +159,18 @@ def plot_combined(dfs: List[pd.DataFrame], labels: List[str], n_aps_thresholds: 
         xs = jnp.linspace(0, aps[-1], 100)
 
         # Plot results
-        plt.scatter(aps, times_median, marker="x", label=label, color=COLOR_MAP[label])
-        plt.scatter(outliers[0], outliers[1], color=COLOR_MAP[label], marker=".") if with_outliers else None
+            # Just for the legend
+        latex_label = f"{label}:\n" + r"$$\alpha =  {:.5f}, \beta = {:.5f}$$".format(scale, exponent)
+        plt.plot([], [], color=COLOR_MAP[label], linewidth=1., label=latex_label)
+            # Median
+        plt.scatter(aps, times_median, marker="_", color=COLOR_MAP[label], s=20, linewidths=0.5)
+            # Quantiles
         plt.fill_between(aps[mask], times_low[mask], times_high[mask], alpha=0.3, color=COLOR_MAP[label])
+            # Whiskers
+        # plt.scatter(aps[mask], whiskers_low[mask], color=COLOR_MAP[label], marker="_")
+        # plt.scatter(aps[mask], whiskers_high[mask], color=COLOR_MAP[label], marker="_")
+            # Outliers
+        plt.scatter(outliers[0], outliers[1], color=COLOR_MAP[label], marker=".") if with_outliers else None
         plt.plot(
             xs, scale*jnp.power(exponent, xs),
             color="tab:grey", linestyle="--", linewidth=0.5, label=f"Fit" if label == labels[-1] else None
