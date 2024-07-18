@@ -15,9 +15,9 @@ DB_COLUMNS = ["start_timestamp", "n_sta_per_ap", "x_aps", "y_aps", "repetition",
 CMAP = get_cmap(5)
 COLOR_MAP = {
     "CBC": CMAP[0],
-    "CPLEX": CMAP[2],
+    "CPLEX": CMAP[3],
 }
-QUANTILE = 0.9
+QUANTILE = 0.75
 CONFIDENCE_INTERVAL = 0.95
 
 
@@ -173,7 +173,7 @@ def plot_combined(dfs: List[pd.DataFrame], labels: List[str], n_aps_thresholds: 
         plt.scatter(outliers[0], outliers[1], color=COLOR_MAP[label], marker=".") if with_outliers else None
         plt.plot(
             xs, scale*jnp.power(exponent, xs),
-            color="tab:grey", linestyle="--", linewidth=0.5, label=f"Fit" if label == labels[-1] else None
+            color="tab:grey", linestyle="--", linewidth=0.5, label=f"Theil-Sen regression" if label == labels[-1] else None
         )
     
     plt.yscale("log")
