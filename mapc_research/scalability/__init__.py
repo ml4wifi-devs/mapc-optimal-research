@@ -6,15 +6,16 @@ import os
 import pandas as pd
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.linear_model import LinearRegression, TheilSenRegressor
 
 from mapc_research.plots import confidence_interval, set_style, get_cmap
 
 RESULTS_PATH = "mapc_research/scalability/results"
 DB_COLUMNS = ["start_timestamp", "n_sta_per_ap", "x_aps", "y_aps", "repetition", "seed", "time"]
-CMAP = get_cmap(5)
+CMAP = get_cmap(4)
 COLOR_MAP = {
-    "CBC": CMAP[0],
+    "CBC": CMAP[1],
     "CPLEX": CMAP[3],
 }
 QUANTILE = 0.75
@@ -160,19 +161,25 @@ def plot_combined(dfs: List[pd.DataFrame], labels: List[str], n_aps_thresholds: 
 
         # Plot results
             # Just for the legend
-        latex_label = f"{label}:\n" + r"$$\alpha =  {:.5f}, \beta = {:.5f}$$".format(scale, exponent)
+        latex_label = f"{label}:\n" + r"$$\alpha =  {:.2f}, \beta = {:.2f}$$".format(scale, exponent)
         plt.plot([], [], color=COLOR_MAP[label], linewidth=1., label=latex_label)
             # Median
-        plt.scatter(aps, times_median, marker="_", color=COLOR_MAP[label], s=20, linewidths=0.5)
+        # plt.scatter(aps, times_median, marker="_", color=COLOR_MAP[label], s=20, linewidths=0.5)
             # Quantiles
-        plt.fill_between(aps[mask], times_low[mask], times_high[mask], alpha=0.3, color=COLOR_MAP[label])
+        # plt.fill_between(aps[mask], times_low[mask], times_high[mask], alpha=0.3, color=COLOR_MAP[label])
             # Whiskers
         # plt.scatter(aps[mask], whiskers_low[mask], color=COLOR_MAP[label], marker="_")
         # plt.scatter(aps[mask], whiskers_high[mask], color=COLOR_MAP[label], marker="_")
             # Outliers
-        plt.scatter(outliers[0], outliers[1], color=COLOR_MAP[label], marker=".") if with_outliers else None
+        # plt.scatter(outliers[0], outliers[1], color=COLOR_MAP[label], marker=".") if with_outliers else None
+
+        sns.boxplot(
+            data=df, x='n_aps', y='time', order=jnp.arange(len(df['n_aps'])),
+            color=COLOR_MAP[label], showfliers=True, linewidth=0.5,
+            flierprops=dict(markeredgecolor=COLOR_MAP[label], markersize=1)
+        )
         plt.plot(
-            xs, scale*jnp.power(exponent, xs),
+            xs.tolist(), scale*jnp.power(exponent, xs),
             color="tab:grey", linestyle="--", linewidth=0.5, label=f"Theil-Sen regression" if label == labels[-1] else None
         )
     
