@@ -1,22 +1,24 @@
 import os
 os.environ['JAX_ENABLE_X64'] = "True"
 
+import traceback
 import time
 import json
 from itertools import chain
 from tqdm import tqdm
+from typing import Dict, List
 
 import jax
 import jax.numpy as jnp
-from scipy.optimize import curve_fit
 from chex import PRNGKey
-import matplotlib.pyplot as plt
 from mapc_optimal import Solver, positions_to_path_loss
 from argparse import ArgumentParser
+from datetime import datetime
 
 from mapc_research.envs.static_scenarios import *
 from mapc_research.plots import confidence_interval, set_style
 from mapc_research.utils import *
+from mapc_research.scalability import *
 
 
 def measure_point(
@@ -37,7 +39,7 @@ def measure_point(
         scenario_config["seed"] = seeds[i]
 
         # Create scenario
-        scenario = random_scenario(**scenario_config)
+        scenario = residential_scenario(**scenario_config)
         if verbose:
             scenario.plot()
 
@@ -59,85 +61,90 @@ def measure_point(
             start = time.time()
             configurations, rate, objectives = solver(path_loss, return_objectives=True)
             times.append(time.time() - start)
-        except:
-            times.append(jnp.nan)
+        except Exception as e:
+            traceback.print_exc()
 
-    return jnp.asarray(times)
+        # Update database
+        update_database(
+            db_path,
+            time_start,
+            n_sta_per_ap,
+            x_aps,
+            y_aps,
+            i+1,
+            seeds[i],
+            times[i]
+        )
+
+
+def update_database(
+        db_path: str,
+        time_start: float,
+        n_sta_per_ap: int,
+        x_aps: int,
+        y_aps: int,
+        repetition: int,
+        seed: int,
+        time: float,
+        verbose: bool = False
+    ):
+    
+    start_timestamp = datetime.fromtimestamp(time_start).strftime("%Y-%m-%d %H:%M:%S")
+    row = f"{start_timestamp},{n_sta_per_ap},{x_aps},{y_aps},{repetition},{seed},{time}\n"
+    db = open(db_path, "a")
+    db.write(row)
+    db.close()
+    print(f"[DB UPDATE] {row}") if verbose else None
+
 
 
 if __name__ == "__main__":
-    set_style()
 
     # Load experiment configuration from config file
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", type=str, required=True)
-    parser.add_argument("-s", "--solver", type=str, default="pulp", choices=["pulp", "copt"])
-    parser.add_argument("-l", "--log-space", action="store_true")
+    parser.add_argument("-s", "--solver", type=str, default="pulp", choices=SOLVERS.keys())
+    parser.add_argument("-d", "--database_name", type=str, default="scalability")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
     experiment_config = json.load(open(args.config, "r"))
 
     # Define range of access points
-    min_aps = experiment_config["min_aps"]
-    max_aps = experiment_config["max_aps"]
-    step_aps = experiment_config["step_aps"]
-    if args.log_space:
-        aps = jnp.logspace(jnp.log10(min_aps), jnp.log10(max_aps), num=(max_aps-min_aps)//step_aps+1, dtype=int)
-    else:
-        aps = jnp.linspace(min_aps, max_aps, num=(max_aps-min_aps)//step_aps+1, dtype=int)
+    aps = jnp.array([x * y for x, y in zip(experiment_config["x_apartments"], experiment_config["y_apartments"])])
 
     # Define solver kwargs
     solver_kwargs = {
-        "solver": SOLVERS[args.solver](msg=args.verbose),
+        "solver": SOLVERS[args.solver](msg=args.verbose, mip=True),
+        "opt_sum": experiment_config["opt_sum"],
     }
+
+    # Create database
+    db_path = create_db(args.database_name)
     
     # Iterate over access points and measure exec times
-    total_start = time.time()
-    times_mean = []
-    times_std_low = []
-    times_std_high = []
-    for n_ap in tqdm(aps):
+    opt_task = "total_sum" if experiment_config["opt_sum"] else "min_thr"
+    n_sta_per_ap = experiment_config["n_sta_per_ap"]
+    time_start = time.time()
+    for i, n_ap in enumerate(tqdm(aps), start=1):
+        x_aps = experiment_config["x_apartments"][i - 1]
+        y_aps = experiment_config["y_apartments"][i - 1]
+
         # Define scenario config
         scenario_config = {
-            "n_ap": n_ap,
-            "d_sta": experiment_config["d_sta"],
-            "n_sta_per_ap": experiment_config["n_sta_per_ap"],
-            "ap_density": experiment_config["ap_density"]
+            "x_apartments": x_aps,
+            "y_apartments": y_aps,
+            "n_sta_per_ap": n_sta_per_ap,
+            "size": experiment_config["size"],
         }
 
         # Measure exec time
-        times = measure_point(
+        measure_point(
             n_reps=experiment_config["n_reps"],
             scenario_config=scenario_config,
             key=jax.random.PRNGKey(experiment_config["seed"]),
             verbose=args.verbose,
             solver_kwargs=solver_kwargs
         )
-        mean, ci_low, ci_high = confidence_interval(times)
-        times_mean.append(mean)
-        times_std_low.append(ci_low)
-        times_std_high.append(ci_high)
-    total_time = time.time() - total_start
-    print(f"Total execution time: {total_time:.2f}s")
-    
-    # Fit exponential curve to times
-    (shift, exponent), _ = curve_fit(lambda x, s, e: s + jnp.power(e, x), aps, times_mean)
 
-    # Plot results
-    set_style()
-    plt.figure(figsize=(4,3))
-    plt.scatter(aps, times_mean, c="C0", label="Data", marker="x")
-    plt.fill_between(aps, times_std_low, times_std_high, color="C0", alpha=0.3)
-    xs = jnp.linspace(aps[0], aps[-1], 100)
-    plt.plot(
-        xs, shift + jnp.power(exponent, xs),
-        c="tab:grey", linestyle="--", linewidth=0.5, label=f"Fit"
-    )
-    plt.yscale("log" if args.log_space else "linear")
-    plt.xlabel("Number of access points")
-    plt.ylabel("Execution time [s]")
-    plt.legend()
-    plt.title(f"Total execution time: {total_time:.2f}s\nshift = {shift:.5f}, exponent = {exponent:.5f}")
-    plt.tight_layout()
-    plt.savefig(f"scalability-{args.solver}-n_reps{experiment_config['n_reps']}.pdf")
-
+    # Print total execution time
+    print(f"Total execution time: {(time.time() - time_start):.2f}s")

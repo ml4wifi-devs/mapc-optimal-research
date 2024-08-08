@@ -1,0 +1,10 @@
+{
+    "seed": 46,
+    "opt_sum": true,
+    "n_reps": 5,
+    "log_space": false,
+    "x_apartments": [2, 3, 2, 3, 4, 3, 5, 4, 5, 4, 6, 5],
+    "y_apartments": [1, 1, 2, 2, 2, 3, 2, 3, 3, 4, 3, 4],
+    "n_sta_per_ap": 4,
+    "size": 10
+}

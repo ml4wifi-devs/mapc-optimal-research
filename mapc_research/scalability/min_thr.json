@@ -1,9 +1,9 @@
 {
-    "seed": 44,
-    "opt_sum": true,
-    "n_reps": 1,
+    "seed": 42,
+    "opt_sum": false,
+    "n_reps": 5,
     "min_aps": 2,
-    "max_aps": 3,
+    "max_aps": 20,
     "step_aps": 1,
     "log_space": false,
     "ap_density": 0.04,
