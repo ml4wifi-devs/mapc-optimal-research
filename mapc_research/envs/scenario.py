@@ -10,6 +10,7 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
 from chex import Array, Scalar, PRNGKey
+from mapc_sim.constants import DEFAULT_SIGMA, DEFAULT_TX_POWER
 from mapc_sim.sim import network_data_rate
 from mapc_sim.utils import tgax_path_loss as path_loss
 
@@ -183,12 +184,12 @@ class StaticScenario(Scenario):
         Two dimensional array of node positions. Each row corresponds to X and Y coordinates of a node.
     mcs: int
         Modulation and coding scheme of the nodes. Each entry corresponds to a node.
-    tx_power: Scalar
+    associations: Dict
+        Dictionary of associations between access points and stations.
+    default_tx_power: Scalar
         Transmission power of the nodes. Each entry corresponds to a node.
     sigma: Scalar
         Standard deviation of the additive white Gaussian noise.
-    associations: Dict
-        Dictionary of associations between access points and stations.
     walls: Optional[Array]
         Matrix counting the walls between each pair of nodes.
     walls_pos: Optional[Array]
@@ -201,9 +202,9 @@ class StaticScenario(Scenario):
             self,
             pos: Array,
             mcs: int,
-            tx_power: Scalar,
-            sigma: Scalar,
             associations: Dict,
+            default_tx_power: Scalar = DEFAULT_TX_POWER,
+            sigma: Scalar = DEFAULT_SIGMA,
             walls: Optional[Array] = None,
             walls_pos: Optional[Array] = None,
             tx_power_delta: Scalar = 6.0
@@ -212,7 +213,7 @@ class StaticScenario(Scenario):
 
         self.pos = pos
         self.mcs = jnp.full(pos.shape[0], mcs, dtype=jnp.int32)
-        self.tx_power = jnp.full(pos.shape[0], tx_power)
+        self.tx_power = jnp.full(pos.shape[0], default_tx_power)
         self.tx_power_delta = tx_power_delta
 
         self.data_rate_fn = jax.jit(partial(

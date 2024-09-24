@@ -5,17 +5,12 @@ from typing import Optional
 import jax
 import jax.numpy as jnp
 from chex import Scalar
-from mapc_sim.constants import DEFAULT_TX_POWER, DEFAULT_SIGMA, DATA_RATES
+from mapc_sim.constants import DATA_RATES
 
 from mapc_research.envs.scenario import StaticScenario
 
 
-def toy_scenario_1(
-        d: Scalar = 40.,
-        mcs: int = 11,
-        tx_power: Scalar = DEFAULT_TX_POWER,
-        sigma: Scalar = DEFAULT_SIGMA
-) -> StaticScenario:
+def toy_scenario_1(d: Scalar = 20., mcs: int = 7) -> StaticScenario:
     """
     STA 1     AP A     STA 2     STA 3     AP B     STA 4
     """
@@ -34,16 +29,10 @@ def toy_scenario_1(
         4: [3, 5]
     }
 
-    return StaticScenario(pos, mcs, tx_power, sigma, associations)
+    return StaticScenario(pos, mcs, associations)
 
 
-def toy_scenario_2(
-        d_ap: Scalar = 50.,
-        d_sta: Scalar = 1.,
-        mcs: int = 11,
-        tx_power: Scalar = DEFAULT_TX_POWER,
-        sigma: Scalar = DEFAULT_SIGMA
-) -> StaticScenario:
+def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., mcs: int = 11) -> StaticScenario:
     """
     STA 16   STA 15                  STA 12   STA 11
 
@@ -80,16 +69,38 @@ def toy_scenario_2(
         3: [16, 17, 18, 19]
     }
 
-    return StaticScenario(pos, mcs, tx_power, sigma, associations)
+    return StaticScenario(pos, mcs, associations)
 
 
-def small_office_scenario(
-        d_ap: Scalar,
-        d_sta: Scalar,
-        mcs: int = 11,
-        tx_power: Scalar = DEFAULT_TX_POWER,
-        sigma: Scalar = DEFAULT_SIGMA
+def random_scenario(
+        seed: int,
+        d_ap: Optional[Scalar] = 100.,
+        n_ap: int = 4,
+        d_sta: Scalar = 1.,
+        n_sta_per_ap: int = 4,
+        ap_density: Optional[float] = None,
+        mcs: int = 11
 ) -> StaticScenario:
+    assert d_ap is not None or ap_density is not None, 'Either d_ap or ap_density must be specified'
+    if ap_density is not None:
+        d_ap = jnp.sqrt(n_ap / ap_density)  # As AP density is constant, d_ap is proportional to sqrt(n_ap)
+    ap_key, key = jax.random.split(jax.random.PRNGKey(seed))
+    ap_pos = jax.random.uniform(ap_key, (n_ap, 2)) * d_ap
+    sta_pos = []
+
+    for pos in ap_pos:
+        sta_key, key = jax.random.split(key)
+        center = jnp.repeat(pos[None, :], n_sta_per_ap, axis=0)
+        stations = center + jax.random.normal(sta_key, (n_sta_per_ap, 2)) * d_sta
+        sta_pos += stations.tolist()
+
+    pos = jnp.array(ap_pos.tolist() + sta_pos)
+    associations = {i: list(range(n_ap + i * n_sta_per_ap, n_ap + (i + 1) * n_sta_per_ap)) for i in range(n_ap)}
+
+    return StaticScenario(pos, mcs, associations)
+
+
+def small_office_scenario(d_ap: Scalar, d_sta: Scalar, mcs: int = 11) -> StaticScenario:
     """
     STA 16   STA 15         |        STA 12   STA 11
                             |
@@ -170,7 +181,12 @@ def small_office_scenario(
         [d_ap / 2, d_ap / 2, d_ap / 2, d_ap + d_ap / 2],
     ])
 
-    return StaticScenario(pos, mcs, tx_power, sigma, associations, walls, walls_pos)
+    return StaticScenario(pos, mcs, associations, walls=walls, walls_pos=walls_pos)
+
+
+small_office_scenario_10 = partial(small_office_scenario, d_ap=10., d_sta=2.)
+small_office_scenario_20 = partial(small_office_scenario, d_ap=20., d_sta=2.)
+small_office_scenario_30 = partial(small_office_scenario, d_ap=30., d_sta=2.)
 
 
 def openwifi_scenario():
@@ -197,42 +213,7 @@ def openwifi_scenario():
         2: [7, 8],
     }
 
-    return OpenWifiScenario(pos, 4, DEFAULT_TX_POWER, DEFAULT_SIGMA, associations)
-
-
-small_office_scenario_10 = partial(small_office_scenario, d_ap=10., d_sta=2.)
-small_office_scenario_20 = partial(small_office_scenario, d_ap=20., d_sta=2.)
-small_office_scenario_30 = partial(small_office_scenario, d_ap=30., d_sta=2.)
-
-
-def random_scenario(
-        seed: int,
-        d_ap: Optional[Scalar] = 100.,
-        n_ap: int = 4,
-        d_sta: Scalar = 1.,
-        n_sta_per_ap: int = 4,
-        ap_density: Optional[float] = None,
-        mcs: int = 11,
-        tx_power: Scalar = DEFAULT_TX_POWER,
-        sigma: Scalar = DEFAULT_SIGMA
-) -> StaticScenario:
-    assert d_ap is not None or ap_density is not None, 'Either d_ap or ap_density must be specified'
-    if ap_density is not None:
-        d_ap = jnp.sqrt(n_ap / ap_density)  # As AP density is constant, d_ap is proportional to sqrt(n_ap)
-    ap_key, key = jax.random.split(jax.random.PRNGKey(seed))
-    ap_pos = jax.random.uniform(ap_key, (n_ap, 2)) * d_ap
-    sta_pos = []
-
-    for pos in ap_pos:
-        sta_key, key = jax.random.split(key)
-        center = jnp.repeat(pos[None, :], n_sta_per_ap, axis=0)
-        stations = center + jax.random.normal(sta_key, (n_sta_per_ap, 2)) * d_sta
-        sta_pos += stations.tolist()
-
-    pos = jnp.array(ap_pos.tolist() + sta_pos)
-    associations = {i: list(range(n_ap + i * n_sta_per_ap, n_ap + (i + 1) * n_sta_per_ap)) for i in range(n_ap)}
-
-    return StaticScenario(pos, mcs, tx_power, sigma, associations)
+    return OpenWifiScenario(pos, 4, associations)
 
 
 def residential_scenario(
@@ -241,9 +222,7 @@ def residential_scenario(
         y_apartments: int = 4,
         n_sta_per_ap: int = 4,
         size: Scalar = 10.,
-        mcs: int = 11,
-        tx_power: Scalar = DEFAULT_TX_POWER,
-        sigma: Scalar = DEFAULT_SIGMA
+        mcs: int = 11
 ) -> StaticScenario:
     key = jax.random.PRNGKey(seed)
     associations, pos, walls_pos = {}, [], []
@@ -259,4 +238,4 @@ def residential_scenario(
     walls_pos.append([x_apartments * size, 0, x_apartments * size, y_apartments * size])
     walls_pos.append([0, y_apartments * size, x_apartments * size, y_apartments * size])
 
-    return StaticScenario(jnp.array(pos), mcs, tx_power, sigma, associations, walls_pos=jnp.array(walls_pos))
+    return StaticScenario(jnp.array(pos), mcs, associations, walls_pos=jnp.array(walls_pos))
