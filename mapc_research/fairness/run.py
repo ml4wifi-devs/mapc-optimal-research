@@ -16,7 +16,8 @@ from mapc_sim.sim import network_data_rate
 from reinforced_lib.agents.mab import NormalThompsonSampling
 from tqdm import tqdm
 
-from mapc_research.envs.static_scenarios import simple_scenario_5, StaticScenario
+from mapc_research.envs.scenario import StaticScenario
+from mapc_research.envs.test_scenarios import small_office_scenario
 from mapc_research.plots import get_cmap, set_style
 
 
@@ -123,7 +124,7 @@ if __name__ == '__main__':
     colors = get_cmap(3)
 
     distances = np.logspace(np.log10(4), 2, 100)
-    scenarios = [simple_scenario_5(d) for d in distances]
+    scenarios = [small_office_scenario(d, 2.0) for d in distances]
 
     fairness_index_sum = solver_fairness(scenarios, {'opt_sum': True})
     fairness_index_min = solver_fairness(scenarios, {'opt_sum': False})

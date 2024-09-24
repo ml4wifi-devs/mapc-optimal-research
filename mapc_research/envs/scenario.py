@@ -1,17 +1,19 @@
 import string
 from abc import ABC, abstractmethod
-from itertools import chain, product
+from functools import partial
+from itertools import chain
+from itertools import product
 from typing import Dict, Optional
 
+import jax
+import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
-from chex import Array, Scalar
+from chex import Array, Scalar, PRNGKey
+from mapc_sim.sim import network_data_rate
 from mapc_sim.utils import tgax_path_loss as path_loss
 
 from mapc_research.plots import get_cmap
-
-
-CCA_THRESHOLD = -82.0  # IEEE Std 802.11-2020 (Revision of IEEE Std 802.11-2016), 17.3.10.6: CCA requirements
 
 
 class Scenario(ABC):
@@ -38,6 +40,8 @@ class Scenario(ABC):
             walls: Optional[Array] = None,
             walls_pos: Optional[Array] = None
     ) -> None:
+        self.CCA_THRESHOLD = -82.0  # IEEE Std 802.11-2020 (Revision of IEEE Std 802.11-2016), 17.3.10.6: CCA requirements
+
         self.associations = associations
         self.pos = pos
         self.walls_pos = walls_pos if walls_pos is not None else []
@@ -139,7 +143,7 @@ class Scenario(ABC):
         signal_power = ap_tx_power - path_loss(distance, ap_walls)
         signal_power = np.where(np.isnan(signal_power), np.inf, signal_power)
 
-        return np.all(signal_power > CCA_THRESHOLD)
+        return np.all(signal_power > self.CCA_THRESHOLD)
 
     def tx_matrix_to_action(self, tx_matrix: Array) -> list:
         """
@@ -166,3 +170,61 @@ class Scenario(ABC):
                     action[ap].append(sta)
 
         return action
+
+
+class StaticScenario(Scenario):
+    """
+    Static scenario with fixed node positions, MCS, tx power, and noise standard deviation.
+    The configuration of parallel transmissions is variable.
+
+    Parameters
+    ----------
+    pos: Array
+        Two dimensional array of node positions. Each row corresponds to X and Y coordinates of a node.
+    mcs: int
+        Modulation and coding scheme of the nodes. Each entry corresponds to a node.
+    tx_power: Scalar
+        Transmission power of the nodes. Each entry corresponds to a node.
+    sigma: Scalar
+        Standard deviation of the additive white Gaussian noise.
+    associations: Dict
+        Dictionary of associations between access points and stations.
+    walls: Optional[Array]
+        Matrix counting the walls between each pair of nodes.
+    walls_pos: Optional[Array]
+        Two dimensional array of wall positions. Each row corresponds to X and Y coordinates of a wall.
+    """
+
+    def __init__(
+            self,
+            pos: Array,
+            mcs: int,
+            tx_power: Scalar,
+            sigma: Scalar,
+            associations: Dict,
+            walls: Optional[Array] = None,
+            walls_pos: Optional[Array] = None
+    ) -> None:
+        super().__init__(associations, pos, walls, walls_pos)
+
+        self.pos = pos
+        self.mcs = jnp.full(pos.shape[0], mcs, dtype=jnp.int32)
+        self.tx_power = jnp.ones(pos.shape[0]) * tx_power
+
+        self.data_rate_fn = jax.jit(partial(
+            network_data_rate,
+            pos=self.pos,
+            mcs=self.mcs,
+            tx_power=self.tx_power,
+            sigma=sigma,
+            walls=self.walls
+        ))
+
+    def __call__(self, key: PRNGKey, tx: Array) -> Scalar:
+        return self.data_rate_fn(key, tx)
+
+    def plot(self, filename: str = None) -> None:
+        super().plot(self.pos, filename)
+
+    def is_cca_single_tx(self) -> bool:
+        return super().is_cca_single_tx(self.pos, self.tx_power)

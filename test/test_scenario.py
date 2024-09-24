@@ -5,12 +5,12 @@ import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 
-from mapc_research.envs.static_scenarios import *
+from mapc_research.envs.test_scenarios import toy_scenario_1, toy_scenario_2, random_scenario
 
 
 class ScenarioClassTestCase(unittest.TestCase):
     def test_simple_plotting(self):
-        scenario = simple_scenario_3()
+        scenario = toy_scenario_2()
         scenario.plot("test_simple_scenario.pdf")
         assert os.path.exists("test_simple_scenario.pdf")
 
@@ -22,37 +22,37 @@ class ScenarioClassTestCase(unittest.TestCase):
     def test_simple_sim(self):
         # Define test-case key and scenario
         key = jax.random.PRNGKey(42)
-        scenario = simple_scenario_3()
+        scenario = toy_scenario_1(d=10., mcs=7)
 
         # Transmission matrices indicating which node is transmitting to which node:
-        # - in this example, STA 1 is transmitting to AP A
+        # - in this example, AP A is transmitting to STA 1
         tx1 = jnp.array([
             [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
             [1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0]
         ])
 
-        # - in this example, STA 2 is transmitting to AP A and STA 3 is transmitting to AP B
+        # - in this example, AP A is transmitting to STA 2 and AP B is transmitting to STA 3
         tx2 = jnp.array([
             [0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0],
             [0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0],
             [0, 0, 0, 0, 0, 0]
         ])
 
-        # - in this example, STA 1 is transmitting to AP A and STA 4 is transmitting to AP B
+        # - in this example, AP A is transmitting to STA 1 and AP B is transmitting to STA 4
         tx3 = jnp.array([
-            [0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0],
             [1, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0]
+            [0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0]
         ])
 
         # Simulate the network for 150 steps
@@ -66,11 +66,11 @@ class ScenarioClassTestCase(unittest.TestCase):
 
         # Plot effective data rate
         xs = jnp.arange(150)
-        plt.scatter(xs, data_rate_1, label='STA 1 -> AP A', alpha=0.5, s=10, edgecolor='none')
-        plt.scatter(xs, data_rate_2, label='STA 2 -> AP A and STA 3 -> AP B', alpha=1., s=10, edgecolor='none')
-        plt.scatter(xs, data_rate_3, label='STA 1 -> AP A and STA 4 -> AP B', alpha=1., s=10, edgecolor='none')
+        plt.plot(xs, data_rate_1, label='AP A -> STA 1')
+        plt.plot(xs, data_rate_2, label='AP A -> STA 2 and AP B -> STA 3')
+        plt.plot(xs, data_rate_3, label='AP A -> STA 1 and AP B -> STA 4')
         plt.xlim(0, 150)
-        plt.ylim(0, 100)
+        plt.ylim(0, 175)
         plt.xlabel('Timestep')
         plt.ylabel('Effective data rate [Mb/s]')
         plt.title('Simulation of MAPC')
@@ -81,7 +81,7 @@ class ScenarioClassTestCase(unittest.TestCase):
         plt.clf()
 
     def test_cca_threshold(self):
-        assert simple_scenario_1(d=25.).is_cca_single_tx()
-        assert simple_scenario_2(d_ap=50.).is_cca_single_tx()
-        assert not simple_scenario_1(d=100.).is_cca_single_tx()
-        assert not simple_scenario_2(d_ap=100.).is_cca_single_tx()
+        assert toy_scenario_1(d=25.).is_cca_single_tx()
+        assert toy_scenario_2(d_ap=50.).is_cca_single_tx()
+        assert not toy_scenario_1(d=100.).is_cca_single_tx()
+        assert not toy_scenario_2(d_ap=100.).is_cca_single_tx()
