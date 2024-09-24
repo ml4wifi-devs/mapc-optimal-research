@@ -5,7 +5,7 @@ from typing import Optional
 import jax
 import jax.numpy as jnp
 from chex import Scalar
-from mapc_sim.constants import DEFAULT_TX_POWER, DEFAULT_SIGMA
+from mapc_sim.constants import DEFAULT_TX_POWER, DEFAULT_SIGMA, DATA_RATES
 
 from mapc_research.envs.scenario import StaticScenario
 
@@ -171,6 +171,33 @@ def small_office_scenario(
     ])
 
     return StaticScenario(pos, mcs, tx_power, sigma, associations, walls, walls_pos)
+
+
+def openwifi_scenario():
+    class OpenWifiScenario(StaticScenario):
+        def __call__(self, key, tx, tx_power):
+            data_rate = self.data_rate_fn(key, tx, tx_power=self.tx_power - self.tx_power_delta * tx_power)
+            return (10 * data_rate / DATA_RATES[self.mcs][0]).astype(int)
+
+    pos = jnp.asarray([
+        [-40., 0.],  # AP1
+        [0., 30.],   # AP2
+        [40., 0.],   # AP3
+        [-20., 0.],  # STA1
+        [-1., 0.],   # STA2
+        [0., 20.],   # STA3
+        [0., 1.],    # STA4
+        [30., 0.],   # STA5
+        [1., 0.],    # STA6
+    ])
+
+    associations = {
+        0: [3, 4],
+        1: [5, 6],
+        2: [7, 8],
+    }
+
+    return OpenWifiScenario(pos, 4, DEFAULT_TX_POWER, DEFAULT_SIGMA, associations)
 
 
 small_office_scenario_10 = partial(small_office_scenario, d_ap=10., d_sta=2.)

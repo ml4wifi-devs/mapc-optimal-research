@@ -193,6 +193,8 @@ class StaticScenario(Scenario):
         Matrix counting the walls between each pair of nodes.
     walls_pos: Optional[Array]
         Two dimensional array of wall positions. Each row corresponds to X and Y coordinates of a wall.
+    tx_power_delta: Scalar
+        Difference in transmission power between the tx power levels.
     """
 
     def __init__(
@@ -203,25 +205,29 @@ class StaticScenario(Scenario):
             sigma: Scalar,
             associations: Dict,
             walls: Optional[Array] = None,
-            walls_pos: Optional[Array] = None
+            walls_pos: Optional[Array] = None,
+            tx_power_delta: Scalar = 6.0
     ) -> None:
         super().__init__(associations, pos, walls, walls_pos)
 
         self.pos = pos
         self.mcs = jnp.full(pos.shape[0], mcs, dtype=jnp.int32)
-        self.tx_power = jnp.ones(pos.shape[0]) * tx_power
+        self.tx_power = jnp.full(pos.shape[0], tx_power)
+        self.tx_power_delta = tx_power_delta
 
         self.data_rate_fn = jax.jit(partial(
             network_data_rate,
             pos=self.pos,
             mcs=self.mcs,
-            tx_power=self.tx_power,
             sigma=sigma,
             walls=self.walls
         ))
 
-    def __call__(self, key: PRNGKey, tx: Array) -> Scalar:
-        return self.data_rate_fn(key, tx)
+    def __call__(self, key: PRNGKey, tx: Array, tx_power: Optional[Array] = None) -> Scalar:
+        if tx_power is None:
+            tx_power = jnp.zeros_like(self.tx_power)
+
+        return self.data_rate_fn(key, tx, tx_power=self.tx_power - self.tx_power_delta * tx_power)
 
     def plot(self, filename: str = None) -> None:
         super().plot(self.pos, filename)
