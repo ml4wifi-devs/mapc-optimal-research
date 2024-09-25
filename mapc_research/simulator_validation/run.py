@@ -123,15 +123,22 @@ def run_mab(scenarios: list, n_reps: int, n_steps: int, seed: int, n_drop: int) 
     results = []
 
     for scenario in tqdm(scenarios):
-        associations = scenario.get_associations()
-        agent_factory = MapcAgentFactory(associations, NormalThompsonSampling, {
+        ts_params = {
             'alpha': 1.6849910402998838,
             'beta': 308.35636094889753,
             'lam': 0.0002314863115510709,
             'mu': 263.8448112411686
-        })
+        }
+        agent_factory = MapcAgentFactory(
+            associations=scenario.get_associations(),
+            agent_type=NormalThompsonSampling,
+            agent_params_lvl1=ts_params,
+            agent_params_lvl2=ts_params,
+            agent_params_lvl3=ts_params,
+            hierarchical=True
+        )
 
-        runs, _ = run_mab_scenario(agent_factory, scenario, n_reps, n_steps, seed)
+        runs, _ = run_mab_scenario(agent_factory, scenario, n_reps, n_steps, 1, seed)
         runs = jnp.asarray(runs)[:, n_drop:].reshape(-1)
         results.append(confidence_interval(runs))
 

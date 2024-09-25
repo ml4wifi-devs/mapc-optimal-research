@@ -10,7 +10,7 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
 from chex import Array, Scalar, PRNGKey
-from mapc_sim.constants import DEFAULT_SIGMA, DEFAULT_TX_POWER
+from mapc_sim.constants import DEFAULT_SIGMA, DEFAULT_TX_POWER, DATA_RATES
 from mapc_sim.sim import network_data_rate
 from mapc_sim.utils import tgax_path_loss as path_loss
 
@@ -49,7 +49,10 @@ class Scenario(ABC):
         self.walls = walls if walls is not None else self._calculate_walls_matrix()
 
     @abstractmethod
-    def __call__(self, *args, **kwargs) -> Scalar:
+    def __call__(self, *args, **kwargs) -> tuple[Scalar, Scalar]:
+        pass
+
+    def reset(self) -> None:
         pass
 
     def _calculate_walls_matrix(self) -> Array:
@@ -212,23 +215,25 @@ class StaticScenario(Scenario):
         super().__init__(associations, pos, walls, walls_pos)
 
         self.pos = pos
-        self.mcs = jnp.full(pos.shape[0], mcs, dtype=jnp.int32)
+        self.mcs = mcs
         self.tx_power = jnp.full(pos.shape[0], default_tx_power)
         self.tx_power_delta = tx_power_delta
 
         self.data_rate_fn = jax.jit(partial(
             network_data_rate,
             pos=self.pos,
-            mcs=self.mcs,
+            mcs=jnp.full(pos.shape[0], mcs, dtype=jnp.int32),
             sigma=sigma,
             walls=self.walls
         ))
 
-    def __call__(self, key: PRNGKey, tx: Array, tx_power: Optional[Array] = None) -> Scalar:
+    def __call__(self, key: PRNGKey, tx: Array, tx_power: Optional[Array] = None) -> tuple[Scalar, Scalar]:
         if tx_power is None:
             tx_power = jnp.zeros_like(self.tx_power)
 
-        return self.data_rate_fn(key, tx, tx_power=self.tx_power - self.tx_power_delta * tx_power)
+        thr = self.data_rate_fn(key, tx, tx_power=self.tx_power - self.tx_power_delta * tx_power)
+        reward = thr / DATA_RATES[self.mcs]
+        return thr, reward
 
     def plot(self, filename: str = None) -> None:
         super().plot(self.pos, filename)

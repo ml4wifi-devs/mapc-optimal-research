@@ -66,18 +66,26 @@ def run_mab(scenario: StaticScenario, n_reps: int, n_steps: int, seed: int) -> l
     key = jax.random.PRNGKey(seed)
     np.random.seed(seed)
 
-    associations = scenario.get_associations()
-    agent_factory = MapcAgentFactory(associations, NormalThompsonSampling, {
+    ts_params = {
         'alpha': 1.6849910402998838,
         'beta': 308.35636094889753,
         'lam': 0.0002314863115510709,
         'mu': 263.8448112411686
-    })
+    }
+    agent_factory = MapcAgentFactory(
+        associations=scenario.get_associations(),
+        agent_type=NormalThompsonSampling,
+        agent_params_lvl1=ts_params,
+        agent_params_lvl2=ts_params,
+        agent_params_lvl3=ts_params,
+        hierarchical=True
+    )
+
 
     data_rate_fn = jax.jit(partial(
         network_data_rate,
         pos=scenario.pos,
-        mcs=scenario.mcs,
+        mcs=np.full(scenario.pos.shape[0], scenario.mcs, dtype=np.int32),
         tx_power=scenario.tx_power,
         sigma=DEFAULT_SIGMA,
         walls=scenario.walls,
@@ -89,14 +97,14 @@ def run_mab(scenario: StaticScenario, n_reps: int, n_steps: int, seed: int) -> l
     for i in range(n_reps):
         agent = agent_factory.create_mapc_agent()
         runs.append([])
-        reward = 0.
 
         for j in range(n_steps):
             key, scenario_key = jax.random.split(key)
-            tx = agent.sample(reward)
+            tx, _ = agent.sample()
 
             reward, frames_transmitted = data_rate_fn(scenario_key, tx)
             data_rate = np.array(frames_transmitted) * FRAMES_TO_RATE
+            agent.update([reward])
 
             for ap, sta in zip(*np.where(tx)):
                 data_rate[sta] = data_rate[ap]
