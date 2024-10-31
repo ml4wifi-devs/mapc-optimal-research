@@ -14,7 +14,7 @@ from mapc_sim.constants import DEFAULT_SIGMA, DEFAULT_TX_POWER, DATA_RATES
 from mapc_sim.sim import network_data_rate
 from mapc_sim.utils import tgax_path_loss as path_loss
 
-from mapc_research.plots import get_cmap
+from mapc_research.plots.config import get_cmap
 
 
 class Scenario(ABC):

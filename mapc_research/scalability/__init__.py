@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.linear_model import LinearRegression, TheilSenRegressor
 
-from mapc_research.plots import confidence_interval, set_style, get_cmap
+from mapc_research.plots.config import set_style, get_cmap
+from mapc_research.plots.utils import confidence_interval
 
 RESULTS_PATH = "mapc_research/scalability/results"
 DB_COLUMNS = ["start_timestamp", "n_sta_per_ap", "x_aps", "y_aps", "repetition", "seed", "time"]
