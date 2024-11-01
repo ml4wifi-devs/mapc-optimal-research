@@ -16,9 +16,9 @@ from mapc_sim.sim import network_data_rate
 from reinforced_lib.agents.mab import NormalThompsonSampling
 from tqdm import tqdm
 
-from mapc_research.envs.scenario import StaticScenario
-from mapc_research.envs.test_scenarios import small_office_scenario
-from mapc_research.plots import get_cmap, set_style
+from mapc_research.envs.static_scenario import StaticScenario
+from mapc_research.envs.scenario_impl import small_office_scenario
+from mapc_research.plots.config import get_cmap, set_style
 
 
 FRAMES_TO_RATE = np.array(FRAME_LEN / (1e6 * TAU))

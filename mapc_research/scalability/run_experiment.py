@@ -15,8 +15,8 @@ from mapc_optimal import Solver, positions_to_path_loss
 from argparse import ArgumentParser
 from datetime import datetime
 
-from mapc_research.envs.test_scenarios import *
-from mapc_research.plots import confidence_interval, set_style
+from mapc_research.envs.scenario_impl import *
+from mapc_research.plots.config import set_style
 from mapc_research.utils import *
 from mapc_research.scalability import *
 

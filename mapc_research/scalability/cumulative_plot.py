@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 from mapc_research.utils import *
 from mapc_research.scalability import *
-from mapc_research.plots import set_style, get_cmap
+from mapc_research.plots.config import set_style, get_cmap
 
 CMAP = get_cmap(2)
 COLOR_MAP = {

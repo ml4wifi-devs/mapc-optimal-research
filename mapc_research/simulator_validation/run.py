@@ -17,9 +17,10 @@ from mapc_sim.sim import network_data_rate
 from reinforced_lib.agents.mab import NormalThompsonSampling
 from tqdm import tqdm
 
-from mapc_research.envs.scenario import StaticScenario
-from mapc_research.envs.test_scenarios import small_office_scenario
-from mapc_research.plots import confidence_interval, get_cmap, set_style
+from mapc_research.envs.static_scenario import StaticScenario
+from mapc_research.envs.scenario_impl import small_office_scenario
+from mapc_research.plots.utils import confidence_interval
+from mapc_research.plots.config import get_cmap, set_style
 
 
 RATE_TO_MCS = dict(zip(DATA_RATES.tolist(), range(len(DATA_RATES))))

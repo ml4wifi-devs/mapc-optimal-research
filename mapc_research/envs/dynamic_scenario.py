@@ -4,13 +4,11 @@ from typing import Optional
 import jax
 import jax.numpy as jnp
 from chex import Array, Scalar, PRNGKey
-from mapc_sim.constants import DEFAULT_TX_POWER, DEFAULT_SIGMA, DATA_RATES
+from mapc_sim.constants import DEFAULT_TX_POWER, DEFAULT_SIGMA, DATA_RATES, TAU
 from mapc_sim.sim import network_data_rate
 
 from mapc_research.envs.scenario import Scenario
-from mapc_research.envs.scenario import StaticScenario
-
-DEFAULT_MCS = 11
+from mapc_research.envs.static_scenario import StaticScenario
 
 
 class DynamicScenario(Scenario):
@@ -19,12 +17,14 @@ class DynamicScenario(Scenario):
 
     Parameters
     ----------
-    associations: dict
-        Dictionary of associations between access points and stations.
     pos: Array
         Two dimensional array of node positions. Each row corresponds to X and Y coordinates of a node.
     mcs: int
         Modulation and coding scheme of the nodes. Each entry corresponds to a node.
+    associations: dict
+        Dictionary of associations between access points and stations.
+    n_steps: int
+        Number of steps in the simulation.
     tx_power: Scalar
         Default transmission power of the nodes.
     sigma: Scalar
@@ -51,11 +51,12 @@ class DynamicScenario(Scenario):
 
     def __init__(
             self,
-            associations: dict,
             pos: Array,
             mcs: int,
-            tx_power: Scalar,
-            sigma: Scalar,
+            associations: dict,
+            n_steps: int,
+            tx_power: Scalar = DEFAULT_TX_POWER,
+            sigma: Scalar = DEFAULT_SIGMA,
             walls: Optional[Array] = None,
             walls_pos: Optional[Array] = None,
             pos_sec: Optional[Array] = None,
@@ -67,7 +68,7 @@ class DynamicScenario(Scenario):
             switch_steps: Optional[list] = None,
             tx_power_delta: Scalar = 3.0
     ) -> None:
-        super().__init__(associations)
+        super().__init__(associations, pos, walls, walls_pos)
 
         if walls is None:
             walls = jnp.zeros((pos.shape[0], pos.shape[0]))
@@ -83,6 +84,7 @@ class DynamicScenario(Scenario):
         ))
         self.tx_power_first = jnp.full(pos.shape[0], tx_power)
         self.mcs_first = mcs
+        self.scenario_first = StaticScenario(pos, mcs, associations, n_steps, tx_power, sigma, walls, walls_pos, tx_power_delta)
 
         if pos_sec is None:
             pos_sec = pos.copy()
@@ -104,10 +106,12 @@ class DynamicScenario(Scenario):
         ))
         self.tx_power_sec = jnp.full(pos_sec.shape[0], tx_power_sec)
         self.mcs_sec = mcs_sec
+        self.scenario_sec = StaticScenario(pos_sec, mcs_sec, associations, n_steps, tx_power_sec, sigma_sec, walls_sec, walls_pos_sec, tx_power_delta)
 
         self.data_rate_fn = self.data_rate_fn_first
         self.tx_power = self.tx_power_first
         self.mcs = self.mcs_first
+        self.n_steps = n_steps
         self.switch_steps = switch_steps
         self.step = 0
         self.tx_power_delta = tx_power_delta
@@ -124,6 +128,21 @@ class DynamicScenario(Scenario):
         thr = self.data_rate_fn(key, tx, tx_power=self.tx_power - self.tx_power_delta * tx_power)
         reward = thr / DATA_RATES[self.mcs]
         return thr, reward
+
+    def split_scenario(self) -> list[tuple[StaticScenario, float]]:
+        is_first = True
+        switch_steps = [0] + self.switch_steps + [self.n_steps]
+        scenarios = []
+
+        for start, end in zip(switch_steps[:-1], switch_steps[1:]):
+            if is_first:
+                scenarios.append((self.scenario_first, (end - start) * TAU))
+            else:
+                scenarios.append((self.scenario_sec, (end - start) * TAU))
+
+            is_first = not is_first
+
+        return scenarios
 
     def reset(self) -> None:
         self.data_rate_fn = self.data_rate_fn_first
@@ -142,6 +161,7 @@ class DynamicScenario(Scenario):
     @staticmethod
     def from_static_params(
             scenario: StaticScenario,
+            n_steps: int,
             pos_sec: Optional[Array] = None,
             mcs_sec: Optional[int] = None,
             tx_power_sec: Optional[Scalar] = None,
@@ -151,9 +171,10 @@ class DynamicScenario(Scenario):
             switch_steps: Optional[list] = None
     ) -> 'DynamicScenario':
         return DynamicScenario(
-            scenario.associations,
             scenario.pos,
             scenario.mcs,
+            scenario.associations,
+            n_steps,
             scenario.tx_power,
             scenario.sigma,
             scenario.walls,
@@ -171,12 +192,14 @@ class DynamicScenario(Scenario):
     def from_static_scenarios(
             scenario: StaticScenario,
             scenario_sec: StaticScenario,
-            switch_steps: list
+            switch_steps: list,
+            n_steps: int
     ) -> 'DynamicScenario':
         return DynamicScenario(
-            scenario.associations,
             scenario.pos,
             scenario.mcs,
+            scenario.associations,
+            n_steps,
             scenario.tx_power,
             scenario.sigma,
             scenario.walls,
@@ -189,37 +212,3 @@ class DynamicScenario(Scenario):
             scenario_sec.walls_pos,
             switch_steps
         )
-
-
-def random_scenario(
-        seed: int,
-        d_ap: Scalar = 100.,
-        n_ap: int = 4,
-        d_sta: Scalar = 1.,
-        n_sta_per_ap: int = 4,
-        max_steps: int = 600,
-        mcs: int = DEFAULT_MCS,
-        tx_power: Scalar = DEFAULT_TX_POWER,
-        sigma: Scalar = DEFAULT_SIGMA
-) -> DynamicScenario:
-    def _draw_positions(key: PRNGKey) -> Array:
-        ap_key, key = jax.random.split(key)
-        ap_pos = jax.random.uniform(ap_key, (n_ap, 2)) * d_ap
-        sta_pos = []
-
-        for pos in ap_pos:
-            sta_key, key = jax.random.split(key)
-            center = jnp.repeat(pos[None, :], n_sta_per_ap, axis=0)
-            stations = center + jax.random.normal(sta_key, (n_sta_per_ap, 2)) * d_sta
-            sta_pos += stations.tolist()
-
-        pos = jnp.array(ap_pos.tolist() + sta_pos)
-        return pos
-
-    associations = {i: list(range(n_ap + i * n_sta_per_ap, n_ap + (i + 1) * n_sta_per_ap)) for i in range(n_ap)}
-
-    key_first, key_sec = jax.random.split(jax.random.PRNGKey(seed), 2)
-    pos_first = _draw_positions(key_first)
-    pos_sec = _draw_positions(key_sec)
-
-    return DynamicScenario(associations, pos_first, mcs, tx_power, sigma, pos_sec=pos_sec, switch_steps=[max_steps // 2])

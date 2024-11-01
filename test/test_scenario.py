@@ -5,7 +5,7 @@ import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 
-from mapc_research.envs.test_scenarios import toy_scenario_1, toy_scenario_2, random_scenario
+from mapc_research.envs.scenario_impl import toy_scenario_1, toy_scenario_2, random_scenario
 
 
 class ScenarioClassTestCase(unittest.TestCase):

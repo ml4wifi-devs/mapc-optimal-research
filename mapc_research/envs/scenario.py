@@ -1,17 +1,12 @@
 import string
 from abc import ABC, abstractmethod
-from functools import partial
 from itertools import chain
 from itertools import product
 from typing import Dict, Optional
 
-import jax
-import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
-from chex import Array, Scalar, PRNGKey
-from mapc_sim.constants import DEFAULT_SIGMA, DEFAULT_TX_POWER, DATA_RATES
-from mapc_sim.sim import network_data_rate
+from chex import Array, Scalar
 from mapc_sim.utils import tgax_path_loss as path_loss
 
 from mapc_research.plots.config import get_cmap
@@ -50,6 +45,26 @@ class Scenario(ABC):
 
     @abstractmethod
     def __call__(self, *args, **kwargs) -> tuple[Scalar, Scalar]:
+        """
+        Calculates the throughput and reward for the given transmission matrix.
+
+        Returns
+        -------
+        tuple[Scalar, Scalar]
+            Throughput and reward.
+        """
+        pass
+
+    @abstractmethod
+    def split_scenario(self) -> list[tuple['Scenario', float]]:
+        """
+        Splits the scenario into the sequence of static scenarios and the duration.
+
+        Returns
+        -------
+        list[tuple[Scenario, float]]
+            List of tuples, where each tuple contains the static scenario and the duration.
+        """
         pass
 
     def reset(self) -> None:
@@ -86,6 +101,16 @@ class Scenario(ABC):
         return self.associations
 
     def plot(self, pos: Array, filename: str = None) -> None:
+        """
+        Plots the current state of the scenario.
+
+        Parameters
+        ----------
+        pos : Array
+            Two dimensional array of node positions.
+        filename : str
+        """
+
         colors = get_cmap(len(self.associations))
         ap_labels = string.ascii_uppercase
 
@@ -120,7 +145,7 @@ class Scenario(ABC):
 
     def is_cca_single_tx(self, pos: Array, tx_power: Array) -> bool:
         """
-        Check if the scenario is a CSMA single transmission scenario, i.e., if there is only one transmission
+        Checks if the scenario is a CSMA single transmission scenario, i.e., if there is only one transmission
         possible at a time due to the CCA threshold. **Note**: This function assumes that the scenario
         contains downlink transmissions only.
 
@@ -151,7 +176,7 @@ class Scenario(ABC):
 
     def tx_matrix_to_action(self, tx_matrix: Array) -> list:
         """
-        Convert a transmission matrix to a list of transmissions. Assumes downlink.
+        Converts a transmission matrix to a list of transmissions. Assumes downlink.
 
         Parameters
         ----------
@@ -174,69 +199,3 @@ class Scenario(ABC):
                     action[ap].append(sta)
 
         return action
-
-
-class StaticScenario(Scenario):
-    """
-    Static scenario with fixed node positions, MCS, tx power, and noise standard deviation.
-    The configuration of parallel transmissions is variable.
-
-    Parameters
-    ----------
-    pos: Array
-        Two dimensional array of node positions. Each row corresponds to X and Y coordinates of a node.
-    mcs: int
-        Modulation and coding scheme of the nodes. Each entry corresponds to a node.
-    associations: Dict
-        Dictionary of associations between access points and stations.
-    default_tx_power: Scalar
-        Transmission power of the nodes. Each entry corresponds to a node.
-    sigma: Scalar
-        Standard deviation of the additive white Gaussian noise.
-    walls: Optional[Array]
-        Matrix counting the walls between each pair of nodes.
-    walls_pos: Optional[Array]
-        Two dimensional array of wall positions. Each row corresponds to X and Y coordinates of a wall.
-    tx_power_delta: Scalar
-        Difference in transmission power between the tx power levels.
-    """
-
-    def __init__(
-            self,
-            pos: Array,
-            mcs: int,
-            associations: Dict,
-            default_tx_power: Scalar = DEFAULT_TX_POWER,
-            sigma: Scalar = DEFAULT_SIGMA,
-            walls: Optional[Array] = None,
-            walls_pos: Optional[Array] = None,
-            tx_power_delta: Scalar = 6.0
-    ) -> None:
-        super().__init__(associations, pos, walls, walls_pos)
-
-        self.pos = pos
-        self.mcs = mcs
-        self.tx_power = jnp.full(pos.shape[0], default_tx_power)
-        self.tx_power_delta = tx_power_delta
-
-        self.data_rate_fn = jax.jit(partial(
-            network_data_rate,
-            pos=self.pos,
-            mcs=jnp.full(pos.shape[0], mcs, dtype=jnp.int32),
-            sigma=sigma,
-            walls=self.walls
-        ))
-
-    def __call__(self, key: PRNGKey, tx: Array, tx_power: Optional[Array] = None) -> tuple[Scalar, Scalar]:
-        if tx_power is None:
-            tx_power = jnp.zeros_like(self.tx_power)
-
-        thr = self.data_rate_fn(key, tx, tx_power=self.tx_power - self.tx_power_delta * tx_power)
-        reward = thr / DATA_RATES[self.mcs]
-        return thr, reward
-
-    def plot(self, filename: str = None) -> None:
-        super().plot(self.pos, filename)
-
-    def is_cca_single_tx(self) -> bool:
-        return super().is_cca_single_tx(self.pos, self.tx_power)

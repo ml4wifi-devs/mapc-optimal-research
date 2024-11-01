@@ -5,16 +5,15 @@ os.environ['JAX_PERSISTENT_CACHE_MIN_ENTRY_SIZE_BYTES'] = '-1'
 os.environ['JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS'] = '0'
 
 import json
-from copy import deepcopy
 from argparse import ArgumentParser
 
 import jax
+from mapc_mab import MapcAgentFactory
 from reinforced_lib.agents.mab import *
 from tqdm import tqdm
 
-from mapc_mab import MapcAgentFactory
-from mapc_research.mab.dynamic_scenarios import *
-from mapc_research.mab.static_scenarios import *
+from mapc_research.envs.scenario import Scenario
+from mapc_research.envs.test_scenarios import ALL_SCENARIOS
 
 
 def run_scenario(
@@ -56,15 +55,7 @@ if __name__ == '__main__':
 
     all_results = []
 
-    for scenario_config in tqdm(config['scenarios'], desc='Scenarios'):
-        scenario = globals()[scenario_config['scenario']](**scenario_config['params'])
-
-        if 'sec' in scenario_config:
-            scenario_params_sec = deepcopy(scenario_config['params'])
-            scenario_params_sec.update(scenario_config['sec'])
-            scenario_sec = globals()[scenario_config['scenario']](**scenario_params_sec)
-            scenario = DynamicScenario.from_static_scenarios(scenario, scenario_sec, scenario_config['switch_steps'])
-
+    for scenario in tqdm(ALL_SCENARIOS, desc='Scenarios'):
         scenario_results = []
 
         for agent_config in tqdm(config['agents'], desc='Agents', leave=False):
@@ -78,7 +69,7 @@ if __name__ == '__main__':
                 seed=config['seed']
             )
 
-            runs, actions = run_scenario(agent_factory, scenario, config['n_reps'], scenario_config['n_steps'], config['seed'])
+            runs, actions = run_scenario(agent_factory, scenario, config['n_reps'], scenario.n_steps, config['seed'])
             scenario_results.append({
                 'agent': {
                     'name': agent_config['name'],
@@ -91,10 +82,7 @@ if __name__ == '__main__':
                 'actions': actions
             })
 
-        all_results.append({
-            'scenario': scenario_config,
-            'agents': scenario_results
-        })
+        all_results.append(scenario_results)
 
     with open(args.output, 'w') as file:
         json.dump(all_results, file)
