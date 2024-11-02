@@ -7,6 +7,7 @@ from chex import Array, Scalar, PRNGKey
 from mapc_sim.sim import network_data_rate
 from mapc_sim.constants import DEFAULT_TX_POWER, DEFAULT_SIGMA, DATA_RATES, TAU
 
+from mapc_research.envs import IDEAL_MCS
 from mapc_research.envs.scenario import Scenario
 
 
@@ -61,17 +62,18 @@ class StaticScenario(Scenario):
         self.data_rate_fn = jax.jit(partial(
             network_data_rate,
             pos=self.pos,
-            mcs=jnp.full(pos.shape[0], mcs, dtype=jnp.int32),
+            mcs=jnp.full(pos.shape[0], mcs, dtype=jnp.int32) if not IDEAL_MCS else None,
             sigma=self.sigma,
             walls=self.walls
         ))
+        self.normalize_reward = DATA_RATES[self.mcs] if not IDEAL_MCS else DATA_RATES[-1]
 
     def __call__(self, key: PRNGKey, tx: Array, tx_power: Optional[Array] = None) -> tuple[Scalar, Scalar]:
         if tx_power is None:
             tx_power = jnp.zeros_like(self.tx_power)
 
         thr = self.data_rate_fn(key, tx, tx_power=self.tx_power - self.tx_power_delta * tx_power)
-        reward = thr / DATA_RATES[self.mcs]
+        reward = thr / self.normalize_reward
         return thr, reward
 
     def split_scenario(self) -> list[tuple['StaticScenario', float]]:
