@@ -224,16 +224,28 @@ def residential_scenario(
 ) -> StaticScenario:
     key = jax.random.PRNGKey(seed)
     associations, pos, walls_pos = {}, [], []
+    rooms = {}
 
-    for i, j in product(range(x_apartments), range(y_apartments)):
-        associations[len(pos)] = list(range(len(pos) + 1, len(pos) + n_sta_per_ap + 1))
-        walls_pos.append([i * size, j * size, (i + 1) * size, j * size])
-        walls_pos.append([i * size, j * size, i * size, (j + 1) * size])
+    for x, y in product(range(x_apartments), range(y_apartments)):
+        ap, stas = len(pos), list(range(len(pos) + 1, len(pos) + n_sta_per_ap + 1))
+        associations[ap] = stas
+        rooms.update({node: (x, y) for node in stas + [ap]})
+
+        walls_pos.append([x * size, y * size, (x + 1) * size, y * size])
+        walls_pos.append([x * size, y * size, x * size, (y + 1) * size])
 
         pos_key, key = jax.random.split(key)
-        pos += (jax.random.uniform(pos_key, (n_sta_per_ap + 1, 2)) * size + jnp.array([i * size, j * size])).tolist()
+        pos += (jax.random.uniform(pos_key, (n_sta_per_ap + 1, 2)) * size + jnp.array([x * size, y * size])).tolist()
 
     walls_pos.append([x_apartments * size, 0, x_apartments * size, y_apartments * size])
     walls_pos.append([0, y_apartments * size, x_apartments * size, y_apartments * size])
+    walls = jnp.zeros((len(pos), len(pos)))
 
-    return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls_pos=jnp.array(walls_pos))
+    for i, j in product(rooms.keys(), repeat=2):
+        xi, yi = rooms[i]
+        xj, yj = rooms[j]
+
+        walls = walls.at[i, j].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
+        walls = walls.at[j, i].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
+
+    return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls=walls, walls_pos=jnp.array(walls_pos))
