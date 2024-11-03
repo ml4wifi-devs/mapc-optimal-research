@@ -2,6 +2,7 @@ import json
 from argparse import ArgumentParser
 from itertools import chain
 
+import pulp as plp
 from mapc_optimal import Solver, positions_to_path_loss
 from tqdm import tqdm
 
@@ -18,7 +19,7 @@ def run_solver(scenario: StaticScenario, solver_kwargs: dict) -> tuple:
     walls = scenario.walls
     path_loss = positions_to_path_loss(positions, walls)
 
-    solver = Solver(stations, access_points, **solver_kwargs)
+    solver = Solver(stations, access_points, **solver_kwargs, solver=plp.CPLEX_CMD(msg=False))
     return solver(path_loss, associations)
 
 
