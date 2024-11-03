@@ -19,7 +19,7 @@ def run_solver(scenario: StaticScenario, solver_kwargs: dict) -> tuple:
     path_loss = positions_to_path_loss(positions, walls)
 
     solver = Solver(stations, access_points, **solver_kwargs)
-    return solver(path_loss)
+    return solver(path_loss, associations)
 
 
 if __name__ == '__main__':
@@ -30,19 +30,21 @@ if __name__ == '__main__':
     all_results = []
 
     for scenario in tqdm(ALL_SCENARIOS, desc='Scenarios'):
-        for opt_sum, opt_name in zip([True, False], ['sum', 'min']):
-            split_conf, split_rate = [], []
+        scenario_results = []
+
+        for opt_sum, opt_name in zip([True, False], ['opt_sum', 'opt_min']):
+            split_rate = []
 
             for static, _ in scenario.split_scenario():
-                configuration, solver_rate, _ = run_solver(static, {'opt_sum': opt_sum})
-                split_conf.append(configuration)
+                configuration, solver_rate = run_solver(static, {'opt_sum': opt_sum})
                 split_rate.append(solver_rate)
 
-            all_results.append({
-                'solver': opt_name,
-                'runs': split_rate,
-                'actions': split_conf
+            scenario_results.append({
+                'agent': opt_name,
+                'runs': split_rate
             })
+
+        all_results.append(scenario_results)
 
     with open(args.output, 'w') as file:
         json.dump(all_results, file)

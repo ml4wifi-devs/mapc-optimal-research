@@ -22,7 +22,7 @@ dependencies = [
   "jax~=0.4.30",
   "jaxlib~=0.4.30",
   "mapc_mab@git+https://github.com/ml4wifi-devs/mapc-mab",
-  "mapc-optimal~=0.1.0",
+  "mapc-optimal~=0.1.1",
   "mapc-sim~=0.1.7",
   "matplotlib~=3.9.2",
   "optuna~=3.6.1",
