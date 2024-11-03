@@ -1,7 +1,10 @@
 {
-  "n_reps": 40,
+  "n_reps": 10,
   "seed": 42,
   "agents": [
+    {
+      "name": "Random"
+    },
     {
       "name": "EGreedy",
       "params1": {

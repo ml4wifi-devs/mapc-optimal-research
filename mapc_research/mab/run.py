@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 from mapc_research.envs.scenario import Scenario
 from mapc_research.envs.test_scenarios import ALL_SCENARIOS
+from mapc_research.mab.random_agent import RandomMapcAgentFactory
 
 
 def run_scenario(
@@ -59,24 +60,30 @@ if __name__ == '__main__':
         scenario_results = []
 
         for agent_config in tqdm(config['agents'], desc='Agents', leave=False):
-            agent_factory = MapcAgentFactory(
-                associations=scenario.associations,
-                agent_type=globals()[agent_config['name']],
-                agent_params_lvl1=agent_config['params1'],
-                agent_params_lvl2=agent_config['params2'] if agent_config['hierarchical'] else None,
-                agent_params_lvl3=agent_config['params3'] if agent_config['hierarchical'] else None,
-                hierarchical=agent_config['hierarchical'],
-                seed=config['seed']
-            )
+            if agent_config['name'] == 'Random':
+                agent_factory = RandomMapcAgentFactory(
+                    associations=scenario.associations,
+                    seed=config['seed']
+                )
+            else:
+                agent_factory = MapcAgentFactory(
+                    associations=scenario.associations,
+                    agent_type=globals()[agent_config['name']],
+                    agent_params_lvl1=agent_config['params1'],
+                    agent_params_lvl2=agent_config.get('params2', None),
+                    agent_params_lvl3=agent_config.get('params3', None),
+                    hierarchical=agent_config['hierarchical'],
+                    seed=config['seed']
+                )
 
             runs, actions = run_scenario(agent_factory, scenario, config['n_reps'], scenario.n_steps, config['seed'])
             scenario_results.append({
                 'agent': {
                     'name': agent_config['name'],
-                    'params1': agent_config['params1'],
-                    'params2': agent_config['params2'] if agent_config['hierarchical'] else None,
-                    'params3': agent_config['params3'] if agent_config['hierarchical'] else None,
-                    'hierarchical': agent_config['hierarchical']
+                    'params1': agent_config.get('params1', None),
+                    'params2': agent_config.get('params2', None),
+                    'params3': agent_config.get('params3', None),
+                    'hierarchical': agent_config.get('hierarchical', False)
                 },
                 'runs': runs,
                 'actions': actions
