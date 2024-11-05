@@ -197,7 +197,8 @@ class DynamicScenario(Scenario):
             sigma_sec,
             walls_sec,
             walls_pos_sec,
-            switch_steps
+            switch_steps,
+            str_repr=scenario.str_repr
         )
 
     @staticmethod
@@ -222,5 +223,6 @@ class DynamicScenario(Scenario):
             scenario_sec.sigma,
             scenario_sec.walls,
             scenario_sec.walls_pos,
-            switch_steps
+            switch_steps,
+            str_repr=scenario.str_repr
         )
