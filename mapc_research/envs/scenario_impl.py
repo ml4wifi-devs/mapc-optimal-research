@@ -27,7 +27,7 @@ def toy_scenario_1(d: Scalar = 20., mcs: int = 7, n_steps: int = 600) -> StaticS
         4: [3, 5]
     }
 
-    return StaticScenario(pos, mcs, associations, n_steps)
+    return StaticScenario(pos, mcs, associations, n_steps, str_repr="toy_scenario_1")
 
 
 def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., mcs: int = 11, n_steps : int = 600) -> StaticScenario:
@@ -67,7 +67,7 @@ def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., mcs: int = 11, n_step
         3: [16, 17, 18, 19]
     }
 
-    return StaticScenario(pos, mcs, associations, n_steps)
+    return StaticScenario(pos, mcs, associations, n_steps, str_repr="toy_scenario_2")
 
 
 def small_office_scenario(d_ap: Scalar, d_sta: Scalar, n_steps, mcs: int = 11) -> StaticScenario:
@@ -86,6 +86,8 @@ def small_office_scenario(d_ap: Scalar, d_sta: Scalar, n_steps, mcs: int = 11) -
 
     STA 1    STA 2                    STA 5    STA 6
     """
+
+    str_repr = f"small_office_{d_ap}_{d_sta}"
 
     ap_pos = [
         [0 * d_ap, 0 * d_ap],  # AP A
@@ -151,7 +153,7 @@ def small_office_scenario(d_ap: Scalar, d_sta: Scalar, n_steps, mcs: int = 11) -
         [d_ap / 2, d_ap / 2, d_ap / 2, d_ap + d_ap / 2],
     ])
 
-    return StaticScenario(pos, mcs, associations, n_steps, walls=walls, walls_pos=walls_pos)
+    return StaticScenario(pos, mcs, associations, n_steps, walls=walls, walls_pos=walls_pos, str_repr=str_repr)
 
 
 def openwifi_scenario():
@@ -178,7 +180,7 @@ def openwifi_scenario():
         2: [7, 8],
     }
 
-    return OpenWifiScenario(pos, 4, associations, 500)
+    return OpenWifiScenario(pos, 4, associations, 500, str_repr="openwifi")
 
 
 def random_scenario(
@@ -204,13 +206,15 @@ def random_scenario(
         pos = jnp.array(ap_pos.tolist() + sta_pos)
         return pos
 
+    str_repr = f"random_{seed}_{d_ap}_{n_ap}_{d_sta}_{n_sta_per_ap}"
+
     associations = {i: list(range(n_ap + i * n_sta_per_ap, n_ap + (i + 1) * n_sta_per_ap)) for i in range(n_ap)}
 
     key_first, key_sec = jax.random.split(jax.random.PRNGKey(seed), 2)
     pos_first = _draw_positions(key_first)
     pos_sec = _draw_positions(key_sec)
 
-    return DynamicScenario(pos_first, mcs, associations, n_steps, pos_sec=pos_sec, switch_steps=[n_steps // 2])
+    return DynamicScenario(pos_first, mcs, associations, n_steps, pos_sec=pos_sec, switch_steps=[n_steps // 2], str_repr=str_repr)
 
 
 def residential_scenario(
@@ -223,6 +227,7 @@ def residential_scenario(
         mcs: int = 11
 ) -> StaticScenario:
     key = jax.random.PRNGKey(seed)
+    str_repr = f"residential_{seed}_{x_apartments}_{y_apartments}_{n_sta_per_ap}_{size}"
     associations, pos, walls_pos = {}, [], []
     rooms = {}
 
@@ -248,7 +253,7 @@ def residential_scenario(
         walls = walls.at[i, j].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
         walls = walls.at[j, i].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
 
-    return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls=walls, walls_pos=jnp.array(walls_pos))
+    return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls=walls, walls_pos=jnp.array(walls_pos), str_repr=str_repr)
 
 
 def distance_scenario(
@@ -260,7 +265,7 @@ def distance_scenario(
     There is a single AP with a single STA placed at distance `d`. 
     """
     
-    return StaticScenario(jnp.array([[0., 0.], [d, 0.]]), mcs, {0: [1]}, n_steps)
+    return StaticScenario(jnp.array([[0., 0.], [d, 0.]]), mcs, {0: [1]}, n_steps, str_repr=f"distance_{d}")
 
 
 def hidden_station_scenario(
@@ -287,7 +292,7 @@ def hidden_station_scenario(
         3: [2]
     }
 
-    return StaticScenario(pos, mcs, associations, n_steps)
+    return StaticScenario(pos, mcs, associations, n_steps, str_repr=f"hidden_station_{d}")
 
 
 def flow_in_the_middle_scenario(
@@ -317,7 +322,7 @@ def flow_in_the_middle_scenario(
         4: [5]
     }
 
-    return StaticScenario(pos, mcs, associations, n_steps)
+    return StaticScenario(pos, mcs, associations, n_steps, str_repr=f"flow_in_the_middle_{d}")
 
 
 def dense_point_scenario(
@@ -334,4 +339,4 @@ def dense_point_scenario(
 
     associations = {i: [n_ap + i * n_associations + j for j in range(n_associations)] for i in range(n_ap)}
     
-    return StaticScenario(pos, mcs, associations, n_steps)
+    return StaticScenario(pos, mcs, associations, n_steps, str_repr=f"dense_point_{n_ap}_{n_associations}")

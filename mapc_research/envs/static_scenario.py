@@ -48,7 +48,8 @@ class StaticScenario(Scenario):
             sigma: Scalar = DEFAULT_SIGMA,
             walls: Optional[Array] = None,
             walls_pos: Optional[Array] = None,
-            tx_power_delta: Scalar = 3.0
+            tx_power_delta: Scalar = 3.0,
+            str_repr: str = ""
     ) -> None:
         super().__init__(associations, pos, walls, walls_pos)
 
@@ -67,6 +68,11 @@ class StaticScenario(Scenario):
             walls=self.walls
         ))
         self.normalize_reward = DATA_RATES[self.mcs] if not IDEAL_MCS else DATA_RATES[-1]
+
+        self.str_repr = "static_" + str_repr if str_repr else "static"
+    
+    def __str__(self):
+        return self.str_repr
 
     def __call__(self, key: PRNGKey, tx: Array, tx_power: Optional[Array] = None) -> tuple[Scalar, Scalar]:
         if tx_power is None:

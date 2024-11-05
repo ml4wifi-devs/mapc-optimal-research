@@ -67,7 +67,8 @@ class DynamicScenario(Scenario):
             walls_sec: Optional[Array] = None,
             walls_pos_sec: Optional[Array] = None,
             switch_steps: Optional[list] = None,
-            tx_power_delta: Scalar = 3.0
+            tx_power_delta: Scalar = 3.0,
+            str_repr: str = ""
     ) -> None:
         super().__init__(associations, pos, walls, walls_pos)
 
@@ -119,6 +120,11 @@ class DynamicScenario(Scenario):
         self.switch_steps = switch_steps
         self.step = 0
         self.tx_power_delta = tx_power_delta
+
+        self.str_repr = "dynamic_" + str_repr if str_repr else "dynamic"
+    
+    def __str__(self):
+        return self.str_repr
 
     def __call__(self, key: PRNGKey, tx: Array, tx_power: Array) -> tuple[Scalar, Scalar]:
         if tx_power is None:
