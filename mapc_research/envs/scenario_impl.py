@@ -249,3 +249,89 @@ def residential_scenario(
         walls = walls.at[j, i].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
 
     return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls=walls, walls_pos=jnp.array(walls_pos))
+
+
+def distance_scenario(
+        d: Scalar,
+        n_steps: int,
+        mcs: int = 11
+) -> StaticScenario:
+    """
+    There is a single AP with a single STA placed at distance `d`. 
+    """
+    
+    return StaticScenario(jnp.array([[0., 0.], [d, 0.]]), mcs, {0: [1]}, n_steps)
+
+
+def hidden_station_scenario(
+        d: Scalar,
+        n_steps: int,
+        mcs: int = 4
+) -> StaticScenario:
+    """
+    There are two APs 2 distance units `d` apart. Both APs have a single
+    station placed in between them in the same place.
+
+    AP_A <--d--> STA_1, STA_2 <--d--> AP_B 
+    """
+
+    pos = jnp.array([
+        [0., 0.],       # AP A
+        [d, 0.],        # STA 1
+        [d, 0.],        # STA 2
+        [2 * d, 0.]     # AP B
+    ])
+
+    associations = {
+        0: [1],
+        3: [2]
+    }
+
+    return StaticScenario(pos, mcs, associations, n_steps)
+
+
+def flow_in_the_middle_scenario(
+        d: Scalar,
+        n_steps: int,
+        mcs: int = 4,
+) -> StaticScenario:
+    """
+    There are thres APs placed in line spaced `d` units apart. Each AP is associated with a single STA,
+    placed in the same place as the AP.
+
+    AP_A <--d--> STA_1, STA_2 <--d--> AP_B 
+    """
+
+    pos = jnp.array([
+        [0., 0.],       # AP A
+        [0., 0.],       # STA 1
+        [d, 0.],        # AP B
+        [d, 0.],        # STA 2
+        [2 * d, 0.],    # AP C
+        [2 * d, 0.]     # STA 3
+    ])
+
+    associations = {
+        0: [1],
+        2: [3],
+        4: [5]
+    }
+
+    return StaticScenario(pos, mcs, associations, n_steps)
+
+
+def dense_point_scenario(
+        n_ap: int,
+        n_associations: int,
+        n_steps: int,
+        mcs: int = 11,
+) -> StaticScenario:
+    """
+    There is `n_ap` APs with `n_associations` STAs each. All of the devices are placed at the same point. 
+    """
+
+    pos = jnp.array([[0., 0.] for _ in range(n_ap * (n_associations + 1))])
+
+    associations = {i: [n_ap + i * n_associations + j for j in range(n_associations)] for i in range(n_ap)}
+    
+    return StaticScenario(pos, mcs, associations, n_steps)
