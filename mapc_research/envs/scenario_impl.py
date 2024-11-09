@@ -340,3 +340,23 @@ def dense_point_scenario(
     associations = {i: [n_ap + i * n_associations + j for j in range(n_associations)] for i in range(n_ap)}
     
     return StaticScenario(pos, mcs, associations, n_steps, str_repr=f"dense_point_{n_ap}_{n_associations}")
+
+
+def spatial_reuse_scenario(d_ap: Scalar, d_sta: Scalar, mcs: int = 7, n_steps: int = 600) -> StaticScenario:
+    """
+    STA 1 <--d_sta--> AP A <--d_ap--> AP B <--d_sta--> STA 4
+    """
+
+    pos = jnp.array([
+        [0., 0.],               # STA 1
+        [d_sta, 0.],            # AP A
+        [d_sta + d_ap, 0.],     # AP B
+        [2*d_sta + d_ap, 0.]    # STA 2
+    ])
+
+    associations = {
+        1: [0],
+        2: [3]
+    }
+
+    return StaticScenario(pos, mcs, associations, n_steps, str_repr="spatial_reuse_scenario")
