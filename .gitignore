@@ -161,3 +161,6 @@ cython_debug/
 
 # Numpy files
 *.npy
+
+# data files
+results/*
