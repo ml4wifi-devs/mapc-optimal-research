@@ -1,3 +1,6 @@
+import os
+os.environ['JAX_ENABLE_X64'] = 'True'
+
 import json
 from argparse import ArgumentParser
 from functools import partial
@@ -7,7 +10,7 @@ from typing import Iterable
 import jax
 import jax.numpy as jnp
 from mapc_sim.sim import network_data_rate
-from mapc_sim.constants import DEFAULT_TX_POWER
+from mapc_optimal.constants import MAX_TX_POWER
 from tqdm import tqdm
 
 from mapc_research.envs.static_scenario import StaticScenario
@@ -22,7 +25,7 @@ def iter_tx(associations: dict) -> Iterable:
             yield tuple(zip(active, stations))
 
 
-def run_brute_force(scenario: StaticScenario, delta_tx_power: float = 3.0, tx_power_levels: int = 4) -> tuple:
+def run_brute_force(scenario: StaticScenario, delta_tx_power: float = 2.0, tx_power_levels: int = 5) -> tuple:
     associations = scenario.get_associations()
     n_nodes = len(scenario.pos)
 
@@ -46,7 +49,7 @@ def run_brute_force(scenario: StaticScenario, delta_tx_power: float = 3.0, tx_po
             for (ap, _), tx in zip(conf, power):
                 tx_power_matrix = tx_power_matrix.at[ap].set(tx)
 
-            thr = data_rate_fn(jax.random.PRNGKey(0), tx_matrix, tx_power=DEFAULT_TX_POWER - delta_tx_power * tx_power_matrix)
+            thr = data_rate_fn(jax.random.PRNGKey(0), tx_matrix, tx_power=MAX_TX_POWER - delta_tx_power * tx_power_matrix)
 
             if thr > best_val:
                 best_val, best_conf = thr, (conf, power)
