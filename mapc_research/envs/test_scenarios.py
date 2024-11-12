@@ -1,3 +1,6 @@
+import os
+os.environ['JAX_ENABLE_X64'] = 'True'
+
 from mapc_research.envs.dynamic_scenario import DynamicScenario
 from mapc_research.envs.scenario_impl import *
 
