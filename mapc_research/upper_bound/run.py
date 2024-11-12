@@ -35,17 +35,20 @@ if __name__ == '__main__':
 
         for opt_sum, opt_name in zip([True, False], ['opt_sum', 'opt_min']):
             split_rate = []
+            split_shares = []
 
             for static, _ in scenario.split_scenario():
                 configuration, solver_rate = run_solver(static, {'opt_sum': opt_sum})
                 split_rate.append(solver_rate)
+                split_shares.append(configuration["shares"])
 
             scenario_results.append({
                 'agent': opt_name,
-                'runs': split_rate
+                'runs': split_rate,
+                'shares': split_shares
             })
 
         all_results.append(scenario_results)
 
     with open(args.output, 'w') as file:
-        json.dump(all_results, file)
+        json.dump(all_results, file, indent=4)
