@@ -7,7 +7,6 @@ from chex import Array, Scalar, PRNGKey
 from mapc_sim.sim import network_data_rate
 from mapc_sim.constants import DEFAULT_TX_POWER, DEFAULT_SIGMA, DATA_RATES, TAU
 
-from mapc_research.envs import IDEAL_MCS
 from mapc_research.envs.scenario import Scenario
 
 
@@ -63,11 +62,11 @@ class StaticScenario(Scenario):
         self.data_rate_fn = jax.jit(partial(
             network_data_rate,
             pos=self.pos,
-            mcs=jnp.full(pos.shape[0], mcs, dtype=jnp.int32) if not IDEAL_MCS else None,
+            mcs=None,
             sigma=self.sigma,
             walls=self.walls
         ))
-        self.normalize_reward = DATA_RATES[self.mcs] if not IDEAL_MCS else DATA_RATES[-1]
+        self.normalize_reward = DATA_RATES[-1]
 
         self.str_repr = "static_" + str_repr if str_repr else "static"
     
