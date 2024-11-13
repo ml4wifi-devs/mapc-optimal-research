@@ -6,7 +6,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from mapc_research.plots.config import get_cmap
-from mapc_research.plots.utils import confidence_interval
 
 DISTANCE_MAP ={
     10: 0,
