@@ -2,10 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 COLUMN_WIDTH = 3.5
-COLUMN_HIGHT = 2 * COLUMN_WIDTH / (1 + 5 ** 0.5)
+COLUMN_HEIGHT = 2 * COLUMN_WIDTH / (1 + 5 ** 0.5)
 
 PLOT_PARAMS = {
-    'figure.figsize': (COLUMN_WIDTH, COLUMN_HIGHT),
+    'figure.figsize': (COLUMN_WIDTH, COLUMN_HEIGHT),
     'figure.dpi': 72,
     'font.size': 9,
     'font.family': 'serif',

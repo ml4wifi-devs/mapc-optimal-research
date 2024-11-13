@@ -1,40 +1,32 @@
 import json
 from argparse import ArgumentParser
-from collections import defaultdict
 
 import numpy as np
 import matplotlib.pyplot as plt
 from mapc_sim.constants import DATA_RATES, TAU
 
-from mapc_research.plots.config import AGENT_NAMES, COLUMN_WIDTH, COLUMN_HIGHT, get_cmap
+from mapc_research.plots.config import COLUMN_WIDTH, COLUMN_HEIGHT, get_cmap
 from mapc_research.plots.utils import confidence_interval
 
 
 plt.rcParams.update({
-    'figure.figsize': (3 * COLUMN_WIDTH, COLUMN_HIGHT + 0.7),
+    'figure.figsize': (3 * COLUMN_WIDTH, COLUMN_HEIGHT + 0.7),
     'legend.fontsize': 9
 })
 
-AGGREGATE_STEPS = {
-    "scenario_10m": 20,
-    "scenario_20m": 20,
-    "scenario_30m_long": 100,
-}
-TITLES = {
-    "scenario_10m": r"(a) $d=10$ m",
-    "scenario_20m": r"(b) $d=20$ m",
-    "scenario_30m_long": r"(c) $d=30$ m",
-}
-CLASSIC_MAB = {
-    "scenario_10m": "EGreedy",
-    "scenario_20m": "NormalThompsonSampling",
-    "scenario_30m_long": "Softmax",
-}
+AGENT_NAMES = ["C-Single TX"] + 2 * [r"$\varepsilon$-greedy"] + 2 * ["Softmax"] + 2 * ["UCB"] + 2 * ["TS"]
+HIERARCHICAL = [False] + 4 * [True, False]
+
+N_STEPS = [600, 600, 3000]
+AGGREGATE_STEPS = [20, 20, 100]
+SWITCH_STEPS = [None, 300, 1500]
+TITLES = [r"(a) $d=10$ m", r"(b) $d=20$ m", r"(c) $d=30$ m"]
+CLASSIC_MAB = [4, 4, 4]
 
 
 if __name__ == '__main__':
     args = ArgumentParser()
-    args.add_argument('-f', '--file', type=str, default=f'../envs/all_results.json')
+    args.add_argument('-f', '--file', type=str, default=f'../mab/small_office_results.json')
     args = args.parse_args()
 
     with open(args.file, 'r') as file:
@@ -42,45 +34,40 @@ if __name__ == '__main__':
 
     fig, axes = plt.subplots(1, 3, sharey=True)
     fig.subplots_adjust(wspace=0.)
+    colors = get_cmap(4)
 
-    for ax, scenario in zip(axes, results):
-        scenario_name = scenario['scenario']['name']
-        scenario_results = defaultdict(list)
+    for i, (ax, scenario) in enumerate(zip(axes, results)):
+        scenario_results = [
+            [np.array(run).reshape((-1, AGGREGATE_STEPS[i])).mean(axis=-1) for run in agent_results['runs']]
+            for agent_results in scenario
+        ]
 
-        for agent in scenario['agents']:
-            runs = [np.array(run).reshape((-1, AGGREGATE_STEPS[scenario_name])).mean(axis=-1) for run in agent['runs']]
-            scenario_results[agent['agent']['name']].append((runs, agent['agent']['hierarchical']))
+        xs = np.linspace(0, N_STEPS[i], N_STEPS[i] // AGGREGATE_STEPS[i]) * TAU
 
-        colors = get_cmap(len(scenario_results))
-        n_points = scenario['scenario']['n_steps'] // AGGREGATE_STEPS[scenario_name]
-        xs = np.linspace(0, scenario['scenario']['n_steps'], n_points) * TAU
+        if SWITCH_STEPS[i] is not None:
+            ax.axvline(SWITCH_STEPS[i] * TAU, linestyle='--', color='red')
 
-        if 'mcs' in scenario['scenario']['params']:
-            ax.axhline(DATA_RATES[scenario['scenario']['params']['mcs']], linestyle='--', color='gray')
+        for j, data in enumerate(scenario_results):
+            mean, ci_low, ci_high = confidence_interval(np.asarray(data))
 
-        if 'sec' in scenario['scenario']:
-            for sec in scenario['scenario']['switch_steps']:
-                ax.axvline(sec * TAU, linestyle='--', color='red')
+            if j == 0:
+                ax.plot(xs, mean, linestyle='--', c='gray')
+            elif HIERARCHICAL[j]:
+                ax.plot(xs, mean, c=colors[(j - 1) // 2], marker='o')
+                ax.fill_between(xs, ci_low, ci_high, alpha=0.3, color=colors[(j - 1) // 2], linewidth=0.0)
+            elif j == CLASSIC_MAB[i]:
+                ax.plot(xs, mean, linestyle='--', marker='^', c='gray', markersize=2)
+                ax.fill_between(xs, ci_low, ci_high, alpha=0.3, color='gray', linewidth=0.0)
 
-        for c, (name, data) in zip(colors, scenario_results.items()):
-            for run, hierarchical in data:
-                mean, ci_low, ci_high = confidence_interval(np.asarray(run))
-
-                if hierarchical:
-                    ax.plot(xs, mean, c=c, marker='o')
-                    ax.fill_between(xs, ci_low, ci_high, alpha=0.3, color=c, linewidth=0.0)
-                elif name == CLASSIC_MAB[scenario_name]:
-                    ax.plot(xs, mean, linestyle='--', marker='^', c='gray', markersize=2)
-                    ax.fill_between(xs, ci_low, ci_high, alpha=0.3, color='gray', linewidth=0.0)
-
-        ax.set_title(TITLES[scenario_name], y=-0.45, fontsize=12)
+        ax.set_title(TITLES[i], y=-0.45, fontsize=12)
         ax.set_xlabel('Time [s]', fontsize=12)
         ax.set_xlim((xs[0], xs[-1]))
-        ax.set_ylim(bottom=0, top=425)
+        ax.set_ylim(bottom=0, top=550)
+        ax.set_yticks(range(0, 501, 100))
         ax.tick_params(axis='both', which='both', labelsize=10)
         ax.grid()
 
-        if scenario_name == 'scenario_10m':
+        if i == 0:
             ax.set_ylabel('Effective data rate [Mb/s]', fontsize=12)
             ax.plot([], [], 'o', linestyle='-', c=colors[0], label=r'$\varepsilon$-greedy')
             ax.plot([], [], 'o', linestyle='-', c=colors[1], label='Softmax')
@@ -90,7 +77,7 @@ if __name__ == '__main__':
 
             ax2 = ax.twinx()
             ax2.axis('off')
-            ax2.plot([], [], linestyle='--', c="gray", label='Single TX')
+            ax2.plot([], [], linestyle='--', c="gray", label='C-Single TX')
             ax2.plot([], [], '^', linestyle='--', c='gray', label='Best flat MAB')
             ax2.legend(loc='upper right', title='Baselines')
 
