@@ -37,10 +37,10 @@ def run_scenario(
 
         for _ in range(n_steps):
             key, scenario_key = jax.random.split(key)
-            tx_matrix, tx_power = agent.sample(reward)
-            data_rate, reward = scenario(scenario_key, tx_matrix, tx_power)
+            tx = agent.sample(reward)
+            data_rate, reward = scenario(scenario_key, *tx)
             runs[-1].append(data_rate.item())
-            actions[-1].append(scenario.tx_matrix_to_action(tx_matrix))
+            actions[-1].append(scenario.tx_to_action(*tx))
 
     return runs, actions
 

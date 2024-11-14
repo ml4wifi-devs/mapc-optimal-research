@@ -174,19 +174,22 @@ class Scenario(ABC):
 
         return np.all(signal_power > self.CCA_THRESHOLD)
 
-    def tx_matrix_to_action(self, tx_matrix: Array) -> dict:
+    def tx_to_action(self, tx_matrix: Array, tx_power: Array) -> dict:
         """
         Converts a transmission matrix to a list of transmissions. Assumes downlink.
 
         Parameters
         ----------
         tx_matrix: Array
-            Transmission matrix. Each entry corresponds to a node.
+            Transmission matrix.
+        tx_power: Array
+            Transmission power of the nodes.
 
         Returns
         -------
         dict
-            A dict, where each entry is a transmission from an access point to a station.
+            A dict, where each entry is a transmission from an access point to a station. The key is the access
+            point and the value is the station and the transmission power.
         """
 
         aps = list(self.associations.keys())
@@ -196,6 +199,6 @@ class Scenario(ABC):
             assert np.sum(tx_matrix[ap, :]) <= 1, 'Multiple transmissions at AP'
             for sta in self.associations[ap]:
                 if tx_matrix[ap, sta]:
-                    action[ap] = sta
+                    action[ap] = (sta, tx_power[ap].item())
 
         return action
