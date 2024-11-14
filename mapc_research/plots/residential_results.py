@@ -14,13 +14,12 @@ DISTANCE_MAP ={
 }
 
 LABELS_MAP = {
-    "CSTX": "Co-Single TX",
     "IdealDCF": "DCF",
     "IdealSR": "SR",
-    "IdealFMAB": "Flat MAB",
-    "IdealHMAB": "Hierarchical MAB",
-    "MinUB": "Upper Bound (Min)",
-    "SumUB": "Upper Bound (Sum)"
+    "IdealFMAB": "MAB",
+    "IdealHMAB": "H-MAB",
+    "MinUB": "F-Optimal",
+    "SumUB": "T-Optimal"
 }
 
 X_TICKS_LABELS = ["2x2", "2x3", "3x3", "3x4", "4x4"]
@@ -30,7 +29,7 @@ def clean_data(df: pd.DataFrame):
 
     # Drop columns that are not needed
     df.columns = ['Scenario', 'CSTX', 'DCF', 'IdealDCF', 'IdealSR', 'FMAB', 'IdealFMAB', 'HMAB', 'IdealHMAB', 'MinUB', 'SumUB']
-    df = df.drop(['Scenario', 'DCF', 'FMAB', 'HMAB',], axis=1)
+    df = df.drop(['Scenario', 'CSTX', 'DCF', 'FMAB', 'HMAB',], axis=1)
 
     # The values are in the form of strings, so we need to convert them to floats.
     # But the floating point is represented by a comma, so we need to replace it with a dot.
@@ -55,12 +54,19 @@ def plot_for_distance(distance: float, df_mean: pd.DataFrame, df_low: pd.DataFra
     fig, ax = plt.subplots()
 
     # Plot the data for each transmission mode
-    for c, column in zip(colors, df_mean_iter.columns):
-        xs = list(range(5))
-        ax.scatter(xs, df_mean_iter[column], color=c, marker='.', label=LABELS_MAP[column])
-        ax.plot(xs, df_mean_iter[column], color=c, linewidth=1.0, alpha=0.3)
-        yerr = (df_high_iter[column] - df_low_iter[column]) / 2
-        ax.errorbar(xs, df_mean_iter[column], yerr=yerr, color=c, marker='o', linewidth=0.0, elinewidth=0.5, capthick=0.5, capsize=2)
+    xs = np.arange(5)
+    barwidth = 0.12
+    for i, (color, column) in enumerate(zip(colors, df_mean_iter.columns)):
+        if LABELS_MAP[column] == "T-Optimal":
+            ax.bar(xs, df_mean_iter[column], color="gray", width=5*barwidth, label=LABELS_MAP[column], alpha=0.5)
+
+        else:
+            ax.bar(xs + (i-2) * barwidth, df_mean_iter[column], color=color, width=barwidth, label=LABELS_MAP[column])
+    for i, (color, column) in enumerate(zip(colors, df_mean_iter.columns)):
+        if LABELS_MAP[column] == "T-Optimal":
+            pass
+        else:
+            ax.bar(xs + (i-2) * barwidth, df_mean_iter[column], color=color, width=barwidth)
 
     # Set up the plot layout
     ax.set_xticks(range(5))
@@ -68,7 +74,11 @@ def plot_for_distance(distance: float, df_mean: pd.DataFrame, df_low: pd.DataFra
     ax.set_xlabel("AP Grid Size")
     ax.set_ylabel('Effective data rate [Mb/s]', fontsize=12)
     ax.legend(loc='upper left', fontsize=6, ncols=2)
-    plt.ylim(0, 600)
+
+    # REorder the legend
+    handles, labels = ax.get_legend_handles_labels()
+    order = [0, 2, 4, 1, 3, 5]
+    ax.legend([handles[idx] for idx in order], [labels[idx] for idx in order], loc='upper left', fontsize=6, ncol=2)
 
     # Save the plot
     plt.savefig(os.path.join(results_dir, f"results_residential_d{distance}.pdf"), bbox_inches='tight')
@@ -77,7 +87,7 @@ def plot_for_distance(distance: float, df_mean: pd.DataFrame, df_low: pd.DataFra
 
 if __name__ == '__main__':
     args = ArgumentParser()
-    args.add_argument('-f', '--results_dir', type=str, default=f'results')
+    args.add_argument('-d', '--results_dir', type=str, default=f'results')
     args = args.parse_args()
 
     results_dir = args.results_dir
