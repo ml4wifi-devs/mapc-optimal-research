@@ -1,24 +1,56 @@
-import pandas as pd
+import json
+from itertools import chain
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
 
-from mapc_research.plots.config import get_cmap, PLOT_PARAMS, COLUMN_WIDTH, COLUMN_HEIGHT
+from mapc_research.plots.config import get_cmap
 
 
 if __name__ == "__main__":
-    PLOT_PARAMS['figure.figsize'] = (1.1 * COLUMN_WIDTH, 1.3 * COLUMN_HEIGHT)
-    PLOT_PARAMS['figure.dpi'] = 300
-    plt.rcParams.update(PLOT_PARAMS)
+    random_scenario_idx = 18
 
-    df = pd.read_csv("random_results.csv")
-    dcf = df.pop('DCF')
-    df = df.div(dcf / 100, axis=0)
+    with open('../mab/mean_dcf_results.json') as f:
+        dcf_results = json.load(f)[random_scenario_idx:]
+        dcf_results = chain.from_iterable(dcf_results)
+        dcf_results = np.asarray(list(dcf_results))
 
-    plt.axhline(100, color='gray', linestyle='--', label='DCF', linewidth=0.5)
+    with open('../mab/mean_mab_h_results.json') as f:
+        mab_h_results = json.load(f)[random_scenario_idx:]
+        mab_h_results = chain.from_iterable(mab_h_results)
+        mab_h_results = np.asarray(list(mab_h_results)) / dcf_results * 100
+
+    with open('../mab/mean_mab_f_results.json') as f:
+        mab_f_results = json.load(f)[random_scenario_idx:]
+        mab_f_results = chain.from_iterable(mab_f_results)
+        mab_f_results = np.asarray(list(mab_f_results)) / dcf_results * 100
+
+    with open('../mab/mean_optimal_results.json') as f:
+        optimal_results = json.load(f)[random_scenario_idx:]
+        t_optimal_results = [o[0]['runs'] for o in optimal_results]
+        t_optimal_results = chain.from_iterable(t_optimal_results)
+        t_optimal_results = np.asarray(list(t_optimal_results)) / dcf_results * 100
+        f_optimal_results = [o[1]['runs'] for o in optimal_results]
+        f_optimal_results = chain.from_iterable(f_optimal_results)
+        f_optimal_results = np.asarray(list(f_optimal_results)) / dcf_results * 100
+
+    with open('../mab/mean_sr_results.json') as f:
+        sr_results = json.load(f)[random_scenario_idx:]
+        sr_results = chain.from_iterable(sr_results)
+        sr_results = np.asarray(list(sr_results)) / dcf_results * 100
+
+    df = pd.DataFrame(
+        np.stack([t_optimal_results, f_optimal_results, mab_h_results, mab_f_results, sr_results], axis=1),
+        columns=['T-Optimal', 'F-Optimal', 'H-MAB', 'MAB', 'SR']
+    )
+
+    plt.axvline(100, color='gray', linestyle='--', linewidth=0.5)
     sns.boxplot(
         data=pd.melt(df),
-        x='variable', y='value', hue='variable',
-        palette=get_cmap(6).tolist(),
+        y='variable', x='value', hue='variable',
+        palette=get_cmap(5).tolist()[::-1],
         width=0.5,
         boxprops=dict(linewidth=0.5),
         whiskerprops=dict(linewidth=0.5),
@@ -27,13 +59,11 @@ if __name__ == "__main__":
         flierprops=dict(marker='o', markersize=2, markeredgecolor='k', markerfacecolor='k'),
     )
 
-    plt.xlabel('')
-    plt.xticks(rotation=30)
-    plt.ylabel(r'Relative improvement over DCF [\%]')
-    plt.ylim(0, 350)
+    plt.ylabel('')
+    plt.xlabel(r'Improvement over DCF [\%]')
+    plt.xlim(0, 400)
 
-    plt.grid(axis='y', linewidth=0.5)
-    plt.legend(loc='upper left')
+    plt.grid(axis='x', linewidth=0.5)
     plt.tight_layout()
     plt.savefig('random_boxplot.pdf', bbox_inches='tight')
     plt.show()

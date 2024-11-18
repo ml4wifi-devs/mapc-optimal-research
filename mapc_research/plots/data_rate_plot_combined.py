@@ -120,8 +120,8 @@ if __name__ == '__main__':
 
             ax2 = ax.twinx()
             ax2.axis('off')
-            ax2.plot([], [], linestyle='--', c="gray", label='DCF')
-            ax2.plot([], [], '^', linestyle='--', c='gray', label='SR')
+            ax2.plot([], [], linestyle='--', c="gray", label='DCF (average)')
+            ax2.plot([], [], '^', linestyle='--', c='gray', label='SR (average)')
             ax2.plot([], [], c='gray', label='T-Optimal')
             ax2.legend(loc='upper right', title='Baselines')
 
