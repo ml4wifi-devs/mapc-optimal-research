@@ -14,12 +14,12 @@ DISTANCE_MAP ={
 }
 
 LABELS_MAP = {
-    "IdealDCF": "DCF",
-    "IdealSR": "SR",
-    "IdealFMAB": "MAB",
-    "IdealHMAB": "H-MAB",
-    "MinUB": "F-Optimal",
-    "SumUB": "T-Optimal"
+    "DCF + Ideal MCS": "DCF",
+    "SR + Ideal MCS": "SR",
+    "MAB [F] + ideal MCS": "MAB",
+    "MAB [H] + Ideal MCS": "H-MAB",
+    "Upper bound [min]": "F-Optimal",
+    "Upper bound [sum]": "T-Optimal"
 }
 
 X_TICKS_LABELS = ["2x2", "2x3", "3x3", "3x4", "4x4"]
@@ -28,8 +28,12 @@ X_TICKS_LABELS = ["2x2", "2x3", "3x3", "3x4", "4x4"]
 def clean_data(df: pd.DataFrame):
 
     # Drop columns that are not needed
-    df.columns = ['Scenario', 'CSTX', 'DCF', 'IdealDCF', 'IdealSR', 'FMAB', 'IdealFMAB', 'HMAB', 'IdealHMAB', 'MinUB', 'SumUB']
-    df = df.drop(['Scenario', 'CSTX', 'DCF', 'FMAB', 'HMAB',], axis=1)
+    old_columns = df.columns
+    new_columns = ["DCF + Ideal MCS", "SR + Ideal MCS", "MAB [F] + ideal MCS", "MAB [H] + Ideal MCS", "Upper bound [min]", "Upper bound [sum]"]
+    df = df.drop(columns=[c for c in old_columns if c not in new_columns], axis=1)
+    
+    # Rename the columns
+    df = df.rename(columns=LABELS_MAP)
 
     # The values are in the form of strings, so we need to convert them to floats.
     # But the floating point is represented by a comma, so we need to replace it with a dot.
@@ -41,13 +45,11 @@ def clean_data(df: pd.DataFrame):
     return df
 
 
-def plot_for_distance(distance: float, df_mean: pd.DataFrame, df_low: pd.DataFrame, df_high: pd.DataFrame, results_dir: str):
+def plot_for_distance(distance: float, df_mean: pd.DataFrame, results_path: str):
 
     # Filter the dataframes by the distance
     modulo = DISTANCE_MAP[distance]
     df_mean_iter = df_mean.iloc[lambda x: x.index % 3 == modulo].reset_index(drop=True)
-    df_low_iter = df_low.iloc[lambda x: x.index % 3 == modulo].reset_index(drop=True)
-    df_high_iter = df_high.iloc[lambda x: x.index % 3 == modulo].reset_index(drop=True)
 
     # Setups for the plot
     colors = get_cmap(len(df_mean_iter.columns))
@@ -57,13 +59,13 @@ def plot_for_distance(distance: float, df_mean: pd.DataFrame, df_low: pd.DataFra
     xs = np.arange(5)
     barwidth = 0.12
     for i, (color, column) in enumerate(zip(colors, df_mean_iter.columns)):
-        if LABELS_MAP[column] == "T-Optimal":
-            ax.bar(xs, df_mean_iter[column], color="gray", width=5*barwidth, label=LABELS_MAP[column], alpha=0.5)
+        if column == "T-Optimal":
+            ax.bar(xs, df_mean_iter[column], color="gray", width=5*barwidth, label=column, alpha=0.5)
 
         else:
-            ax.bar(xs + (i-2) * barwidth, df_mean_iter[column], color=color, width=barwidth, label=LABELS_MAP[column])
+            ax.bar(xs + (i-2) * barwidth, df_mean_iter[column], color=color, width=barwidth, label=column)
     for i, (color, column) in enumerate(zip(colors, df_mean_iter.columns)):
-        if LABELS_MAP[column] == "T-Optimal":
+        if column == "T-Optimal":
             pass
         else:
             ax.bar(xs + (i-2) * barwidth, df_mean_iter[column], color=color, width=barwidth)
@@ -81,22 +83,19 @@ def plot_for_distance(distance: float, df_mean: pd.DataFrame, df_low: pd.DataFra
     ax.legend([handles[idx] for idx in order], [labels[idx] for idx in order], loc='upper left', fontsize=6, ncol=2)
 
     # Save the plot
-    plt.savefig(os.path.join(results_dir, f"results_residential_d{distance}.pdf"), bbox_inches='tight')
+    save_path = results_path.replace(".csv", f"_{distance}.pdf")
+    plt.savefig(save_path, bbox_inches='tight')
     plt.clf()
 
 
 if __name__ == '__main__':
     args = ArgumentParser()
-    args.add_argument('-d', '--results_dir', type=str, default=f'results')
+    args.add_argument('-r', '--results_path', type=str, required=True)
     args = args.parse_args()
 
-    results_dir = args.results_dir
-
     # Load the data
-    df_mean = clean_data(pd.read_csv(os.path.join(results_dir, "residential_mean.csv")))
-    df_low = clean_data(pd.read_csv(os.path.join(results_dir, "residential_low.csv")))
-    df_high = clean_data(pd.read_csv(os.path.join(results_dir, "residential_high.csv")))
+    df_mean = clean_data(pd.read_csv(args.results_path))
 
     # Plot the data for each distance
     for distance in DISTANCE_MAP.keys():
-        plot_for_distance(distance, df_mean, df_low, df_high, results_dir)
+        plot_for_distance(distance, df_mean, args.results_path)
