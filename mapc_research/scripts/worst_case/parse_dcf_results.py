@@ -36,8 +36,7 @@ if __name__ == '__main__':
     args = args.parse_args()
 
     agents = [
-        "dcf",
-        # "oracle",
+        "oracle",
         "sr"
     ]
 
