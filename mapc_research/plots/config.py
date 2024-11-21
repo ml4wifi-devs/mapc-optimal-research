@@ -24,9 +24,13 @@ PLOT_PARAMS = {
 }
 
 
-AGENT_NAMES = {
-    'EGreedy': r'$\varepsilon$-greedy',
-    'NormalThompsonSampling': 'TS'
+AGENT_COLORS = {
+    'DCF': '#a6cee3',
+    'SR': '#1f78b4',
+    'MAB': '#b2df8a',
+    'H-MAB': '#33a02c',
+    'F-Optimal': '#fb9a99',
+    'T-Optimal': '#e31a1c',
 }
 
 

@@ -49,12 +49,12 @@ if __name__ == "__main__":
     plt.axvline(100, color='gray', linestyle='--', linewidth=0.5)
     sns.boxplot(
         data=pd.melt(df),
-        y='variable', x='value', hue='variable',
-        palette=get_cmap(5).tolist()[::-1],
+        y='variable', x='value',
+        color='#305080',
         width=0.6,
         boxprops=dict(linewidth=0.),
         whiskerprops=dict(linewidth=0.5),
-        medianprops=dict(linewidth=0.5, color='k'),
+        medianprops=dict(linewidth=0.5, color='w'),
         capprops=dict(linewidth=0.5),
         flierprops=dict(marker='o', markersize=2, markeredgecolor='k', markerfacecolor='k'),
     )

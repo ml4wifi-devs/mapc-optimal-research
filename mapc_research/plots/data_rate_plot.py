@@ -23,7 +23,7 @@ def plot(scenario_results: dict, scenario_config: dict, aggregate_steps: int) ->
             mean, ci_low, ci_high = confidence_interval(np.asarray(run))
 
             if hierarchical:
-                plt.plot(xs, mean, label=AGENT_NAMES.get(name, name), c=c)
+                plt.plot(xs, mean, label=name, c=c)
             else:
                 plt.plot(xs, mean, linestyle='--', c=c)
 
