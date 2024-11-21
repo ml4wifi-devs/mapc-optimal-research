@@ -7,7 +7,6 @@ from chex import Array, Scalar, PRNGKey
 from mapc_sim.constants import DEFAULT_TX_POWER, DEFAULT_SIGMA, DATA_RATES, TAU
 from mapc_sim.sim import network_data_rate
 
-from mapc_research.envs import IDEAL_MCS
 from mapc_research.envs.scenario import Scenario
 from mapc_research.envs.static_scenario import StaticScenario
 
@@ -80,11 +79,11 @@ class DynamicScenario(Scenario):
         self.data_rate_fn_first = jax.jit(partial(
             network_data_rate,
             pos=pos,
-            mcs=jnp.full(pos.shape[0], mcs, dtype=jnp.int32) if not IDEAL_MCS else None,
+            mcs=None,
             sigma=sigma,
             walls=walls
         ))
-        self.normalize_reward_first = DATA_RATES[mcs] if not IDEAL_MCS else DATA_RATES[-1]
+        self.normalize_reward_first = DATA_RATES[-1]
         self.tx_power_first = jnp.full(pos.shape[0], tx_power)
         self.mcs_first = mcs
         self.scenario_first = StaticScenario(pos, mcs, associations, n_steps, tx_power, sigma, walls, walls_pos, tx_power_delta)
@@ -103,11 +102,11 @@ class DynamicScenario(Scenario):
         self.data_rate_fn_sec = jax.jit(partial(
             network_data_rate,
             pos=pos_sec,
-            mcs=jnp.full(pos_sec.shape[0], mcs_sec, dtype=jnp.int32) if not IDEAL_MCS else None,
+            mcs=None,
             sigma=sigma_sec,
             walls=walls_sec
         ))
-        self.normalize_reward_sec = DATA_RATES[mcs_sec] if not IDEAL_MCS else DATA_RATES[-1]
+        self.normalize_reward_sec = DATA_RATES[-1]
         self.tx_power_sec = jnp.full(pos_sec.shape[0], tx_power_sec)
         self.mcs_sec = mcs_sec
         self.scenario_sec = StaticScenario(pos_sec, mcs_sec, associations, n_steps, tx_power_sec, sigma_sec, walls_sec, walls_pos_sec, tx_power_delta)

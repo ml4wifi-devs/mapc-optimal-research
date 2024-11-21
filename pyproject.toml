@@ -27,6 +27,7 @@ dependencies = [
   "matplotlib~=3.9.2",
   "optuna~=3.6.1",
   "seaborn~=0.13.2",
+  "statsmodels~=0.14.4",
   "scikit-learn~=1.5.2",
   "tqdm~=4.66.5"
 ]
