@@ -84,7 +84,7 @@ def plot_for_distance(distance: float, df_mean: pd.DataFrame, results_path: str)
     # Set up the plot layout
     ax.set_xticks(range(5))
     ax.set_xticklabels(X_TICKS_LABELS)
-    ax.set_xlabel("AP Grid Size")
+    ax.set_xlabel("Room layout")
     ax.set_ylim(-30, ax.get_ylim()[1])
     ax.set_ylabel('Effective data rate [Mb/s]')
     ax.legend(loc='upper left', fontsize=6, ncols=2)
