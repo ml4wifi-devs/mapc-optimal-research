@@ -2,7 +2,7 @@ import json
 
 import numpy as np
 import matplotlib.pyplot as plt
-from mapc_sim.constants import DATA_RATES, TAU
+from mapc_sim.constants import TAU
 
 from mapc_research.plots.config import COLUMN_WIDTH, COLUMN_HEIGHT, AGENT_COLORS
 from mapc_research.plots.utils import confidence_interval
@@ -13,64 +13,60 @@ plt.rcParams.update({
     'legend.fontsize': 9
 })
 
-N_STEPS = [600, 1000, 3000]
-AGGREGATE_STEPS = [20, 25, 100]
-SWITCH_STEPS = [None, 500, 1500]
-TITLES = [r"(a) $d=10$ m", r"(b) $d=20$ m", r"(c) $d=30$ m"]
-H_MAB_IDX = 5
-MAB_IDX = 4
+N_STEPS = [600, 1200, 1200]
+AGGREGATE_STEPS = [20, 40, 40]
+SWITCH_STEPS = [None, 600, 600]
+TITLES = [r"(a) Indoor $2 \times 2$, $\rho=10$ m", r"(b) Indoor $2 \times 2$, $\rho=20$ m", r"(c) Free space"]
 
 
 if __name__ == '__main__':
-    with open('../mab/small_office_mab_results.json') as file:
-        mab_results = json.load(file)
+    with open('../mab/all_mab_h_results.json') as file:
+        mab_h_results = json.load(file)[:3]
+
+    with open('../mab/all_mab_f_results.json') as file:
+        mab_f_results = json.load(file)[:3]
 
     dcf_results = []
 
-    with open('oracle/small_office/static_small_office_10.0_2.0.json') as file:
+    with open('oracle/small_office/static_residential_1_2_2_4_10.0.json') as file:
         dcf_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('oracle/small_office/dynamic_static_small_office_20.0_2.0_a.json') as file:
+    with open('oracle/small_office/dynamic_static_residential_2_2_2_4_20.0_a.json') as file:
         dcf_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('oracle/small_office/dynamic_static_small_office_20.0_2.0_b.json') as file:
+    with open('oracle/small_office/dynamic_static_residential_3_2_2_4_20.0_b.json') as file:
         dcf_results[-1].append(json.load(file)['DataRate']['Mean'])
 
-    with open('oracle/small_office/dynamic_static_small_office_30.0_2.0_a.json') as file:
+    with open('oracle/small_office/dynamic_random_3_75.0_4.0_4_4_a.json') as file:
         dcf_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('oracle/small_office/dynamic_static_small_office_30.0_2.0_b.json') as file:
+    with open('oracle/small_office/dynamic_random_3_75.0_4.0_4_4_b.json') as file:
         dcf_results[-1].append(json.load(file)['DataRate']['Mean'])
 
     sr_results = []
 
-    with open('sr/small_office/static_small_office_10.0_2.0.json') as file:
+    with open('sr/small_office/static_residential_1_2_2_4_10.0.json') as file:
         sr_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('sr/small_office/dynamic_static_small_office_20.0_2.0_a.json') as file:
+    with open('sr/small_office/dynamic_static_residential_2_2_2_4_20.0_a.json') as file:
         sr_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('sr/small_office/dynamic_static_small_office_20.0_2.0_b.json') as file:
+    with open('sr/small_office/dynamic_static_residential_3_2_2_4_20.0_b.json') as file:
         sr_results[-1].append(json.load(file)['DataRate']['Mean'])
 
-    with open('sr/small_office/dynamic_static_small_office_30.0_2.0_a.json') as file:
+    with open('sr/small_office/dynamic_random_3_75.0_4.0_4_4_a.json') as file:
         sr_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('sr/small_office/dynamic_static_small_office_30.0_2.0_b.json') as file:
+    with open('sr/small_office/dynamic_random_3_75.0_4.0_4_4_b.json') as file:
         sr_results[-1].append(json.load(file)['DataRate']['Mean'])
 
     with open('../mab/mean_optimal_results.json') as file:
-        optimal_results = json.load(file)
+        optimal_results = json.load(file)[:3]
 
     fig, axes = plt.subplots(1, 3, sharey=True)
     fig.subplots_adjust(wspace=0.)
 
-    for i, (ax, scenario) in enumerate(zip(axes, mab_results)):
-        scenario_results = [
-            [np.array(run).reshape((-1, AGGREGATE_STEPS[i])).mean(axis=-1) for run in agent_results['runs']]
-            for agent_results in scenario
-        ]
-
+    for i, ax in enumerate(axes):
         xs = np.linspace(0, N_STEPS[i], N_STEPS[i] // AGGREGATE_STEPS[i]) * TAU
 
         if SWITCH_STEPS[i] is not None:
@@ -92,15 +88,19 @@ if __name__ == '__main__':
             ax.plot(xs, len(xs) * [sr_results[i][0]], c=AGENT_COLORS['SR'])
             ax.plot(xs, len(xs) * [optimal_results[i][0]['runs'][0]], c=AGENT_COLORS['T-Optimal'])
 
-        for j, data in enumerate(scenario_results):
-            mean, ci_low, ci_high = confidence_interval(np.asarray(data))
+        n_rep = len(mab_h_results[i][0]['runs'])
+        mab_h = np.asarray(mab_h_results[i][0]['runs']).reshape((n_rep, -1, AGGREGATE_STEPS[i])).mean(axis=-1)
 
-            if j == H_MAB_IDX:
-                ax.plot(xs, mean, c=AGENT_COLORS['H-MAB'], marker='o')
-                ax.fill_between(xs, ci_low, ci_high, alpha=0.3, color=AGENT_COLORS['H-MAB'], linewidth=0.0)
-            elif j == MAB_IDX:
-                ax.plot(xs, mean, c=AGENT_COLORS['MAB'], marker='o')
-                ax.fill_between(xs, ci_low, ci_high, alpha=0.3, color=AGENT_COLORS['MAB'], linewidth=0.0)
+        mean, ci_low, ci_high = confidence_interval(mab_h)
+        ax.plot(xs, mean, c=AGENT_COLORS['H-MAB'], marker='o')
+        ax.fill_between(xs, ci_low, ci_high, alpha=0.3, color=AGENT_COLORS['H-MAB'], linewidth=0.0)
+
+        n_rep = len(mab_f_results[i][0]['runs'])
+        mab_f = np.asarray(mab_f_results[i][0]['runs']).reshape((n_rep, -1, AGGREGATE_STEPS[i])).mean(axis=-1)
+
+        mean, ci_low, ci_high = confidence_interval(mab_f)
+        ax.plot(xs, mean, c=AGENT_COLORS['MAB'], marker='o')
+        ax.fill_between(xs, ci_low, ci_high, alpha=0.3, color=AGENT_COLORS['MAB'], linewidth=0.0)
 
         ax.set_title(TITLES[i], y=-0.45, fontsize=12)
         ax.set_xlabel('Time [s]', fontsize=12)
