@@ -122,6 +122,9 @@ if __name__ == '__main__':
             ax2.plot([], [], c=AGENT_COLORS['SR'], label='SR (avg)')
             ax2.plot([], [], c=AGENT_COLORS['T-Optimal'], label='T-Optimal')
             ax2.legend(loc='upper left', title='Baselines', ncol=2, fontsize=8)
+        else:
+            ax.text(3.5, 495, 'Stations move\nto new positions', fontsize=8)
+            ax.annotate('', xy=(3.4, 410), xytext=(4.2, 480), arrowprops=dict(arrowstyle='->', color='gray', lw=0.75))
 
     plt.tight_layout()
     plt.savefig(f'data-rates.pdf', bbox_inches='tight')
