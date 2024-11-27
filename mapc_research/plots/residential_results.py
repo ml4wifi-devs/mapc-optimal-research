@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from mapc_research.plots.config import get_cmap
+from mapc_research.plots.config import AGENT_COLORS
 
 DISTANCE_MAP ={
     10: 0,
@@ -23,15 +23,6 @@ LABELS_MAP = {
 }
 
 X_TICKS_LABELS = ["2x2", "2x3", "3x3", "3x4", "4x4"]
-
-COLOR_MAP = {
-    "DCF": "#a6cee3",
-    "SR": "#1f78b4",
-    "MAB": "#b2df8a",
-    "H-MAB": "#33a02c",
-    "F-Optimal": "#fb9a99",
-    "T-Optimal": "#e31a1c"
-}
 
 
 def clean_data(df: pd.DataFrame):
@@ -71,12 +62,12 @@ def plot_for_distance(distance: float, df_mean: pd.DataFrame, results_path: str)
             ax.bar(xs, df_mean_iter[column], color="gray", width=5*barwidth, label=column, alpha=0.5)
 
         else:
-            ax.bar(xs + (i-2) * barwidth, df_mean_iter[column], color=COLOR_MAP[column], width=barwidth, label=column)
+            ax.bar(xs + (i-2) * barwidth, df_mean_iter[column], color=AGENT_COLORS[column], width=barwidth, label=column)
     for i, column in enumerate(df_mean_iter.columns):
         if column == "T-Optimal":
             pass
         else:
-            ax.bar(xs + (i-2) * barwidth, df_mean_iter[column], color=COLOR_MAP[column], width=barwidth)
+            ax.bar(xs + (i-2) * barwidth, df_mean_iter[column], color=AGENT_COLORS[column], width=barwidth)
 
     # Add the 0 line
     ax.axhline(0, color='black', linewidth=0.5)
