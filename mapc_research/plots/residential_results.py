@@ -15,7 +15,7 @@ DISTANCE_MAP ={
 
 LABELS_MAP = {
     "DCF + Ideal MCS": "DCF",
-    "SR + Ideal MCS": "SR",
+    "SR -72 dBM": "SR",
     "MAB [F] + ideal MCS": "MAB",
     "MAB [H] + Ideal MCS": "H-MAB",
     "Upper bound [min]": "F-Optimal",
@@ -38,7 +38,7 @@ def clean_data(df: pd.DataFrame):
 
     # Drop columns that are not needed
     old_columns = df.columns
-    new_columns = ["DCF + Ideal MCS", "SR + Ideal MCS", "MAB [F] + ideal MCS", "MAB [H] + Ideal MCS", "Upper bound [min]", "Upper bound [sum]"]
+    new_columns = ["DCF + Ideal MCS", "SR -72 dBM", "MAB [F] + ideal MCS", "MAB [H] + Ideal MCS", "Upper bound [min]", "Upper bound [sum]"]
     df = df.drop(columns=[c for c in old_columns if c not in new_columns], axis=1)
     
     # Rename the columns
@@ -81,15 +81,35 @@ def plot_for_distance(distance: float, df_mean: pd.DataFrame, results_path: str)
     # Add the 0 line
     ax.axhline(0, color='black', linewidth=0.5)
 
+    # Add a table with convergance times
+    columns = X_TICKS_LABELS
+    rows = ["MAB", "H-MAB"]
+    convergence_data = [
+        ["2.96 s", "7.24 s", "N/A", "N/A", "N/A"],
+        ["3.62 s", "9.87 s", "78.97 s", "658.08 s", "inf"]
+    ]
+    the_table = ax.table(
+        cellText=convergence_data,
+        rowLabels=rows,
+        rowColours=[COLOR_MAP["MAB"], COLOR_MAP["H-MAB"]],
+        colLabels=columns,
+        loc='bottom',
+        cellLoc='center',
+        colLoc='center',
+    )
+
+    # - Set linewidth for table borders
+    for key, cell in the_table.get_celld().items():
+        cell.set_linewidth(0.5)
+    the_table.set_fontsize(9)
+
     # Set up the plot layout
-    ax.set_xticks(range(5))
-    ax.set_xticklabels(X_TICKS_LABELS)
-    ax.set_xlabel("Room layout")
+    ax.set_xticks([])
     ax.set_ylim(-30, ax.get_ylim()[1])
     ax.set_ylabel('Effective data rate [Mb/s]')
     ax.legend(loc='upper left', fontsize=6, ncols=2)
 
-    # REorder the legend
+    # Reorder the legend
     handles, labels = ax.get_legend_handles_labels()
     order = [0, 2, 4, 1, 3, 5]
     ax.legend([handles[idx] for idx in order], [labels[idx] for idx in order], loc='upper left', fontsize=6, ncol=2)
