@@ -68,7 +68,10 @@ if __name__ == '__main__':
     plt.plot(f_optimal_cdf, ys, label='F-Optimal', color=AGENT_COLORS['F-Optimal'])
     plt.plot(t_optimal_cdf, ys, label='T-Optimal', color=AGENT_COLORS['T-Optimal'])
 
-    plt.legend(ncol=2)
+    handles, labels = plt.gca().get_legend_handles_labels()
+    order = [0, 2, 4, 1, 3, 5]
+    plt.legend([handles[idx] for idx in order], [labels[idx] for idx in order], loc='lower right', ncol=2)
+
     plt.xlabel('Effective data rate [Mb/s]')
     plt.ylabel('CDF')
     plt.xlim(0, 120)
