@@ -15,7 +15,7 @@ from mapc_research.plots.config import AGENT_COLORS
 
 
 N_RUNS = 10
-N_STEPS = 600
+N_STEPS = 2400
 SIM_TIME = N_STEPS * TAU
 
 
