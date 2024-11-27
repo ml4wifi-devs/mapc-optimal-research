@@ -46,7 +46,7 @@ if __name__ == "__main__":
         columns=['T-Optimal', 'F-Optimal', 'H-MAB', 'MAB', 'SR']
     )
 
-    plt.axvline(100, color='gray', linestyle='--', linewidth=0.5)
+    plt.axvline(100, color='k', linestyle='--', linewidth=0.5)
     sns.boxplot(
         data=pd.melt(df),
         y='variable', x='value',
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         whiskerprops=dict(linewidth=0.5),
         medianprops=dict(linewidth=0.5, color='w'),
         capprops=dict(linewidth=0.5),
-        flierprops=dict(marker='o', markersize=2, markeredgecolor='k', markerfacecolor='k'),
+        flierprops=dict(marker='o', markersize=1, markeredgecolor='#305080'),
     )
 
     plt.ylabel('')

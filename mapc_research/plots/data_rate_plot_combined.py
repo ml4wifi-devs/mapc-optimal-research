@@ -16,7 +16,7 @@ plt.rcParams.update({
 N_STEPS = [600, 1200, 1200]
 AGGREGATE_STEPS = [20, 40, 40]
 SWITCH_STEPS = [None, 600, 600]
-TITLES = [r"(a) Indoor $2 \times 2$, $\rho=10$ m", r"(b) Indoor $2 \times 2$, $\rho=20$ m", r"(c) Free space"]
+TITLES = [r"(a) Multi-room $2 \times 2$, $\rho=10$ m", r"(b) Multi-room $2 \times 2$, $\rho=20$ m", r"(c) Open space"]
 
 
 if __name__ == '__main__':
@@ -28,36 +28,36 @@ if __name__ == '__main__':
 
     dcf_results = []
 
-    with open('oracle/small_office/static_residential_1_2_2_4_10.0.json') as file:
+    with open('oracle/exemplary/static_residential_1_2_2_4_10.0.json') as file:
         dcf_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('oracle/small_office/dynamic_static_residential_2_2_2_4_20.0_a.json') as file:
+    with open('oracle/exemplary/dynamic_static_residential_2_2_2_4_20.0_a.json') as file:
         dcf_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('oracle/small_office/dynamic_static_residential_3_2_2_4_20.0_b.json') as file:
+    with open('oracle/exemplary/dynamic_static_residential_3_2_2_4_20.0_b.json') as file:
         dcf_results[-1].append(json.load(file)['DataRate']['Mean'])
 
-    with open('oracle/small_office/dynamic_random_3_75.0_4.0_4_4_a.json') as file:
+    with open('oracle/exemplary/dynamic_random_3_75.0_4.0_4_4_a.json') as file:
         dcf_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('oracle/small_office/dynamic_random_3_75.0_4.0_4_4_b.json') as file:
+    with open('oracle/exemplary/dynamic_random_3_75.0_4.0_4_4_b.json') as file:
         dcf_results[-1].append(json.load(file)['DataRate']['Mean'])
 
     sr_results = []
 
-    with open('sr/small_office/static_residential_1_2_2_4_10.0.json') as file:
+    with open('sr/exemplary/static_residential_1_2_2_4_10.0.json') as file:
         sr_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('sr/small_office/dynamic_static_residential_2_2_2_4_20.0_a.json') as file:
+    with open('sr/exemplary/dynamic_static_residential_2_2_2_4_20.0_a.json') as file:
         sr_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('sr/small_office/dynamic_static_residential_3_2_2_4_20.0_b.json') as file:
+    with open('sr/exemplary/dynamic_static_residential_3_2_2_4_20.0_b.json') as file:
         sr_results[-1].append(json.load(file)['DataRate']['Mean'])
 
-    with open('sr/small_office/dynamic_random_3_75.0_4.0_4_4_a.json') as file:
+    with open('sr/exemplary/dynamic_random_3_75.0_4.0_4_4_a.json') as file:
         sr_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('sr/small_office/dynamic_random_3_75.0_4.0_4_4_b.json') as file:
+    with open('sr/exemplary/dynamic_random_3_75.0_4.0_4_4_b.json') as file:
         sr_results[-1].append(json.load(file)['DataRate']['Mean'])
 
     with open('../mab/mean_optimal_results.json') as file:
@@ -114,14 +114,14 @@ if __name__ == '__main__':
             ax.set_ylabel('Effective data rate [Mb/s]', fontsize=12)
             ax.plot([], [], marker='o', c=AGENT_COLORS['MAB'], label='MAB')
             ax.plot([], [], marker='o', c=AGENT_COLORS['H-MAB'], label='H-MAB')
-            ax.legend(loc='upper left')
+            ax.legend(loc='upper right', fontsize=8)
 
             ax2 = ax.twinx()
             ax2.axis('off')
-            ax2.plot([], [], c=AGENT_COLORS['DCF'], label='DCF (average)')
-            ax2.plot([], [], c=AGENT_COLORS['SR'], label='SR (average)')
+            ax2.plot([], [], c=AGENT_COLORS['DCF'], label='DCF (avg)')
+            ax2.plot([], [], c=AGENT_COLORS['SR'], label='SR (avg)')
             ax2.plot([], [], c=AGENT_COLORS['T-Optimal'], label='T-Optimal')
-            ax2.legend(loc='upper right', title='Baselines')
+            ax2.legend(loc='upper left', title='Baselines', ncol=2, fontsize=8)
 
     plt.tight_layout()
     plt.savefig(f'data-rates.pdf', bbox_inches='tight')
