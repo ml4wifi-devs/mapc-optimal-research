@@ -1,19 +1,25 @@
 [project]
 name = "mapc_optimal_research"
 version = "0.1.0"
-description = "Resources for the article on the optimal solution of the IEEE 802.11 MAPC (C-SR) problem"
+description = "Resources for C-SR Scheduling With Machine Learning in IEEE 802.11 MAPC Networks"
 
 readme = "README.md"
 license = {file = "LICENSE"}
-keywords = ["802.11", "multi-access point coordination", "optimization"]
+keywords = ["802.11", "coordinated spatial reuse", "reinforcement learning", "channel access", "Wi-Fi", "multi-armed bandits", "upper bound model", "linear programming"]
 
 authors = [
   {name = "Maksymilian Wojnar", email = "maksymilian.wojnar@agh.edu.pl"},
   {name = "Wojciech Ciężobka", email = "wojciech.ciezobka@agh.edu.pl"},
-  {name = "Szymon Szott", email = "szymon.szott@agh.edu.pl"},
-  {name = "Katarzyna Kosek-Szott", email = "katarzyna.kosek-szott@agh.edu.pl"},
+  {name = "Artur Tomaszewski", email = "artur.tomaszewski@pg.edu.pl"},
+  {name = "Piotr Chołda", email = "piotr.cholda@agh.edu.pl"},
   {name = "Krzysztof Rusek", email = "krzysztof.rusek@agh.edu.pl"},
-  {name = "Piotr Chołda", email = "piotr.cholda@agh.edu.pl"}
+  {name = "Katarzyna Kosek-Szott", email = "katarzyna.kosek-szott@agh.edu.pl"},
+  {name = "Jetmir Haxhibeqiri", email = "Jetmir.Haxhibeqiri@UGent.be"},
+  {name = "Jeroen Hoebeke", email = "Jeroen.Hoebeke@UGent.be"},
+  {name = "Boris Bellalta", email = "boris.bellalta@upf.edu"},
+  {name = "Anatolij Zubow", email = "zubow@tkn.tu-berlin.de"},
+  {name = "Falko Dressler", email = "dressler@tkn.tu-berlin.de"},
+  {name = "Szymon Szott", email = "szymon.szott@agh.edu.pl"},
 ]
 
 requires-python = ">=3.9"
@@ -21,15 +27,16 @@ dependencies = [
   "chex~=0.1.86",
   "jax~=0.4.30",
   "jaxlib~=0.4.30",
+  "mapc-dcf~=0.1.3",
   "mapc_mab@git+https://github.com/ml4wifi-devs/mapc-mab",
   "mapc-optimal~=0.1.1",
   "mapc-sim~=0.1.7",
-  "matplotlib~=3.9.2",
+  "matplotlib~=3.9.3",
   "optuna~=3.6.1",
   "seaborn~=0.13.2",
   "statsmodels~=0.14.4",
-  "scikit-learn~=1.5.2",
-  "tqdm~=4.66.5"
+  "scikit-learn~=1.6.0",
+  "tqdm~=4.67.1"
 ]
 
 [tool.setuptools]

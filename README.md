@@ -1,2 +1,3 @@
-# mapc-optimal-research
-Resources for the article on the optimal solution of the IEEE 802.11 MAPC (C-SR) problem
+# mapc-research
+
+Resources for the article "Coordinated Spatial Reuse Scheduling With Machine Learning in IEEE 802.11 MAPC Networks".
