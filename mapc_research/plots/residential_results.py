@@ -82,7 +82,7 @@ def plot_for_distance(distance: float, df_mean: pd.DataFrame, results_path: str)
     the_table = ax.table(
         cellText=convergence_data,
         rowLabels=rows,
-        rowColours=[COLOR_MAP["MAB"], COLOR_MAP["H-MAB"]],
+        rowColours=[AGENT_COLORS["MAB"], AGENT_COLORS["H-MAB"]],
         colLabels=columns,
         loc='bottom',
         cellLoc='center',
