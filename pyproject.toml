@@ -38,8 +38,9 @@ dependencies = [
   "tqdm~=4.67.1"
 ]
 
-[tool.setuptools]
-packages = ["mapc_research"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mapc_research*"]
 
 [build-system]
 requires = ["setuptools", "wheel"]
