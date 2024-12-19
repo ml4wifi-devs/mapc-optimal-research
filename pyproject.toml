@@ -27,6 +27,8 @@ dependencies = [
   "chex~=0.1.86",
   "jax~=0.4.30",
   "jaxlib~=0.4.30",
+  "joblib~=1.4.2",
+  "mapc-dcf~=0.2.0",
   "mapc_mab@git+https://github.com/ml4wifi-devs/mapc-mab",
   "mapc-optimal~=0.1.1",
   "mapc-sim~=0.1.7",
