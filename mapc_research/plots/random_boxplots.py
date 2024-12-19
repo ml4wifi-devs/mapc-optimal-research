@@ -36,7 +36,7 @@ if __name__ == "__main__":
         f_optimal_results = chain.from_iterable(f_optimal_results)
         f_optimal_results = np.asarray(list(f_optimal_results)) / dcf_results * 100
 
-    with open('../mab/mean_sr_results.json') as f:
+    with open('../mab/mean_sr_improved_results.json') as f:
         sr_results = json.load(f)[random_scenario_idx:]
         sr_results = chain.from_iterable(sr_results)
         sr_results = np.asarray(list(sr_results)) / dcf_results * 100

@@ -20,10 +20,10 @@ TITLES = [r"(a) Multi-room $2 \times 2$, $\rho=10$ m", r"(b) Multi-room $2 \time
 
 
 if __name__ == '__main__':
-    with open('../mab/all_mab_h_results.json') as file:
+    with open('../mab/masked_exemplary_h_results.json') as file:
         mab_h_results = json.load(file)[:3]
 
-    with open('../mab/all_mab_f_results.json') as file:
+    with open('../mab/masked_exemplary_f_results.json') as file:
         mab_f_results = json.load(file)[:3]
 
     dcf_results = []
