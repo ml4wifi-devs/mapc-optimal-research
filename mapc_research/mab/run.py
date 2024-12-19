@@ -48,7 +48,7 @@ def run_scenario(
 if __name__ == '__main__':
     args = ArgumentParser()
     args.add_argument('-c', '--config', type=str, default='default_config.json')
-    args.add_argument('-o', '--output', type=str, default='masked_exemplary_h_results.json')
+    args.add_argument('-o', '--output', type=str, default='all_results.json')
     args = args.parse_args()
 
     with open(args.config, 'r') as file:
