@@ -23,12 +23,13 @@ def single_run(
         simulation_length: float,
         warmup_length: float,
         scenario: StaticScenario,
+        spatial_reuse: bool,
         logger: Logger
 ) -> None:
     
     key, key_channel = jax.random.split(key)
     des_env = simpy.Environment()
-    channel = Channel(key_channel, scenario.pos, walls=scenario.walls)
+    channel = Channel(key_channel, spatial_reuse, scenario.pos, walls=scenario.walls)
     aps: Dict[int, AccessPoint] = {}
     for ap in scenario.associations:
 
@@ -71,6 +72,9 @@ if __name__ == '__main__':
     
     key = jax.random.PRNGKey(config['seed'])
 
+    spatial_reuse = config['spatial_reuse']
+    logging.warning(f"Spatial reuse mode: {'ON' if spatial_reuse else 'OFF'}")
+
     scenario = globals()[config['scenario']](**config['scenario_params'])
     scenario, sim_time = scenario.split_scenario()[config["scenario_index"]]
     if args.plot:
@@ -86,7 +90,7 @@ if __name__ == '__main__':
     start_time = time()
     n_runs = config['n_runs']
     Parallel(n_jobs=n_runs)(
-        delayed(single_run)(key, run, sim_time, warmup_time, scenario, logger)
+        delayed(single_run)(key, run, sim_time, warmup_time, scenario, spatial_reuse, logger)
         for key, run in zip(jax.random.split(key, n_runs), range(1, n_runs + 1))
     )
     logger.shutdown(config)
