@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 from mapc_research.envs.scenario_impl import toy_scenario_1, toy_scenario_2, random_scenario
 
 
+plt.rcParams['text.usetex'] = False
+
+
 class ScenarioClassTestCase(unittest.TestCase):
     def test_simple_plotting(self):
         scenario = toy_scenario_2()
@@ -15,8 +18,8 @@ class ScenarioClassTestCase(unittest.TestCase):
         assert os.path.exists("test_simple_scenario.pdf")
 
     def test_random_plotting(self):
-        scenario = random_scenario(seed=88)
-        scenario.plot("test_random_scenario.png")
+        scenario = random_scenario(seed=88, n_steps=10, d_ap=50, n_ap=4, d_sta=5, n_sta_per_ap=4)
+        scenario.plot(scenario.pos, "test_random_scenario.png")
         assert os.path.exists("test_random_scenario.png")
 
     def test_simple_sim(self):
@@ -65,20 +68,20 @@ class ScenarioClassTestCase(unittest.TestCase):
             data_rate_3.append(scenario(k3, tx3))
 
         # Plot effective data rate
-        # xs = jnp.arange(150)
-        # plt.plot(xs, data_rate_1, label='AP A -> STA 1')
-        # plt.plot(xs, data_rate_2, label='AP A -> STA 2 and AP B -> STA 3')
-        # plt.plot(xs, data_rate_3, label='AP A -> STA 1 and AP B -> STA 4')
-        # plt.xlim(0, 150)
-        # plt.ylim(0, 175)
-        # plt.xlabel('Timestep')
-        # plt.ylabel('Effective data rate [Mb/s]')
-        # plt.title('Simulation of MAPC')
-        # plt.legend()
-        # plt.grid()
-        # plt.tight_layout()
-        # plt.savefig('scenario_3_rate.pdf', bbox_inches='tight')
-        # plt.clf()
+        xs = jnp.arange(150)
+        plt.plot(xs, data_rate_1, label='AP A -> STA 1')
+        plt.plot(xs, data_rate_2, label='AP A -> STA 2 and AP B -> STA 3')
+        plt.plot(xs, data_rate_3, label='AP A -> STA 1 and AP B -> STA 4')
+        plt.xlim(0, 150)
+        plt.ylim(bottom=0)
+        plt.xlabel('Timestep')
+        plt.ylabel('Effective data rate [Mb/s]')
+        plt.title('Simulation of MAPC')
+        plt.legend()
+        plt.grid()
+        plt.tight_layout()
+        plt.savefig('scenario_3_rate.pdf', bbox_inches='tight')
+        plt.clf()
 
     def test_cca_threshold(self):
         assert toy_scenario_1(d=25.).is_cca_single_tx()

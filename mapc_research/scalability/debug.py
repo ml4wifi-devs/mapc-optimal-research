@@ -6,11 +6,9 @@ how to enable them in any of the solvers, but I know that COPT_DLL() does suppor
 
 import pulp as plp
 from argparse import ArgumentParser
-from mapc_research.utils.copt_pulp import COPT_DLL
 
 SOLVERS = {
     "pulp": plp.PULP_CBC_CMD,
-    "copt": COPT_DLL,
     "scip": plp.SCIP_CMD,
     "glpk": plp.GLPK_CMD,
     "choco": plp.CHOCO_CMD,
