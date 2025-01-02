@@ -1,8 +1,8 @@
 # Resources for the article "Coordinated Spatial Reuse Scheduling With Machine Learning in IEEE 802.11 MAPC Networks"
 
-This repository is the main workspace for the article. We decided **not to create a monolithic repository** (a mono-repository), but to keep the code and the data separated accross multiple repositories (see below). This approach allows other researchers to cherypick and focus on the single tool developed by the authors of the article without needing to search for specific functionality in a larger and potentially more complex codebase.
+This repository is the main workspace for the article. We decided **not to create a monolithic repository** (a mono-repository), but to keep the code and the data separated accross multiple repositories (see below). This approach allows other researchers to cherrypick and focus on singular tools developed by the authors without needing to search for a specific functionality in a larger and potentially more complex codebase.
 
-Among the installed dependencies, you will find the open-source tools developed alongside the article. The tools are:
+Among the installed dependencies, you will find the open-source tools developed alongside the article. These tools are:
 
 - [mapc_optimal](https://github.com/ml4wifi-devs/mapc-optimal) - a theoretical model of C-SR, which finds the best possible transmission schedule using mixed-integer linear programming.
 - [mapc_dcf](https://github.com/ml4wifi-devs/mapc-dcf) - a discrete event simulator (built using SimPy), in which devices use either legacy IEEE 802.11 channel access (DCF) or 802.11ax spatial reuse (SR).
