@@ -20,6 +20,7 @@ def toy_scenario_1(d: Scalar = 20., mcs: int = 7, n_steps: int = 600) -> StaticS
         [3 * d, 0.],  # STA 3
         [4 * d, 0.],  # AP B
         [5 * d, 0.]   # STA 4
+
     ])
 
     associations = {
