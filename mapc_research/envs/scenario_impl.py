@@ -392,7 +392,7 @@ def test_scenario(scale: float = 1.0) -> StaticScenario:
         2: [6]
     }
 
-    walls_pos = jnp.array([
+    walls_pos = scale * jnp.array([
         [-2.0, 0.0, 2.0, 0.0]
     ])
 
