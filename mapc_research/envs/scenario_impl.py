@@ -360,3 +360,40 @@ def spatial_reuse_scenario(d_ap: Scalar, d_sta: Scalar, mcs: int = 7, n_steps: i
     }
 
     return StaticScenario(pos, mcs, associations, n_steps, str_repr="spatial_reuse_scenario")
+
+
+def test_scenario(scale: float = 1.0) -> StaticScenario:
+    """
+
+             STA 1     AP A     STA 2
+
+
+    -----------------------------------------
+
+
+
+    AP B    STA 3               STA 4    AP C
+
+    """
+
+    pos = scale * jnp.array([
+        [ 0.,  1.],  # AP A
+        [-1., -1.],  # AP B
+        [ 1., -1.],  # AP C
+        [-0.5,  1.],  # STA 1
+        [ 0.5,  1.],  # STA 2
+        [-0.5, -1.],  # STA 3
+        [ 0.5, -1.],  # STA 4
+    ])
+
+    associations = {
+        0: [3, 4],
+        1: [5],
+        2: [6]
+    }
+
+    walls_pos = jnp.array([
+        [-2.0, 0.0, 2.0, 0.0]
+    ])
+
+    return StaticScenario(pos, 0, associations, 0, walls_pos=walls_pos)
