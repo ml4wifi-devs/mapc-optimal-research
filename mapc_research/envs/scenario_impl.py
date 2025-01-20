@@ -226,6 +226,16 @@ def residential_scenario(
         size: Scalar,
         mcs: int = 11
 ) -> StaticScenario:
+    """
+    Implementation of the Residential Scenario from S. Merlin et al. "TGax Simulation Scenarios", IEEE 802.11-14/0980r16
+
+    The path loss model of this scenario requires:
+
+    BREAKING_POINT = 5
+    WALL_LOSS = 5
+
+    """
+
     key = jax.random.PRNGKey(seed)
     str_repr = f"residential_{seed}_{x_apartments}_{y_apartments}_{n_sta_per_ap}_{size}"
     associations, pos, walls_pos = {}, [], []
@@ -397,3 +407,41 @@ def test_scenario(scale: float = 1.0) -> StaticScenario:
     ])
 
     return StaticScenario(pos, 0, associations, 0, walls_pos=walls_pos)
+
+def residential_scenario(
+        seed: int,
+        n_steps: int,
+        x_apartments: int,
+        y_apartments: int,
+        n_sta_per_ap: int,
+        size: Scalar,
+        mcs: int = 11
+) -> StaticScenario:
+    key = jax.random.PRNGKey(seed)
+    str_repr = f"residential_{seed}_{x_apartments}_{y_apartments}_{n_sta_per_ap}_{size}"
+    associations, pos, walls_pos = {}, [], []
+    rooms = {}
+
+    for x, y in product(range(x_apartments), range(y_apartments)):
+        ap, stas = len(pos), list(range(len(pos) + 1, len(pos) + n_sta_per_ap + 1))
+        associations[ap] = stas
+        rooms.update({node: (x, y) for node in stas + [ap]})
+
+        walls_pos.append([x * size, y * size, (x + 1) * size, y * size])
+        walls_pos.append([x * size, y * size, x * size, (y + 1) * size])
+
+        pos_key, key = jax.random.split(key)
+        pos += (jax.random.uniform(pos_key, (n_sta_per_ap + 1, 2)) * size + jnp.array([x * size, y * size])).tolist()
+
+    walls_pos.append([x_apartments * size, 0, x_apartments * size, y_apartments * size])
+    walls_pos.append([0, y_apartments * size, x_apartments * size, y_apartments * size])
+    walls = jnp.zeros((len(pos), len(pos)))
+
+    for i, j in product(rooms.keys(), repeat=2):
+        xi, yi = rooms[i]
+        xj, yj = rooms[j]
+
+        walls = walls.at[i, j].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
+        walls = walls.at[j, i].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
+
+    return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls=walls, walls_pos=jnp.array(walls_pos), str_repr=str_repr)
