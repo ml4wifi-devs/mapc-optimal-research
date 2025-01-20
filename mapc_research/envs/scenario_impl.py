@@ -412,12 +412,12 @@ def test_scenario(scale: float = 1.0) -> StaticScenario:
 def enterprise_scenario(
         seed: int,
         n_steps: int,
-        x_offices: int = 1, #TODO update to 4
-        y_offices: int = 1, #TODO update to 2
+        x_offices: int = 2,
+        y_offices: int = 1,
         x_cubicles: int = 8,
         y_cubicles: int = 8,
-        n_sta_per_cubicle: int = 1, #TODO update to 4
-        n_cubicle_per_ap: int = 4, #TODO update to 16
+        n_sta_per_cubicle: int = 4,
+        n_cubicle_per_ap: int = 16,
         n_ap_per_office: int = 4,
         size_office: Scalar = 20,
         size_cubicle: Scalar = 2,
@@ -425,6 +425,8 @@ def enterprise_scenario(
 ) -> StaticScenario:
     """
     Implementation of the Enterprise Scenario from S. Merlin et al. "TGax Simulation Scenarios", IEEE 802.11-14/0980r16
+
+    As per Figure 5, we assume that APs 1-4 and 5-8 share a managing entity, hence the default x_offices, y_offices values
 
     The path loss model of this scenario requires:
 
@@ -434,19 +436,20 @@ def enterprise_scenario(
     """
 
     # Additional variables describing the scenario
-    inner_corridor_width = (size_office - x_cubicles * size_cubicle) / 4
-    outer_corridor_width = inner_corridor_width/2
+    inner_corridor_width = 1
+    # outer_corridor_width = 0.5
+    size_quad = 2*size_cubicle
 
     key = jax.random.PRNGKey(seed)
     str_repr = f"enterprise_{seed}_{x_offices}_{y_offices}_{n_cubicle_per_ap}_{n_sta_per_cubicle}_{size_office}_{size_cubicle}"
     associations, pos, walls_pos = {}, [], []
     offices, cubicles = {}, {}
 
-    office_counter = 0
     for x, y in product(range(x_offices), range(y_offices)):
-        aps = list(range(office_counter*n_ap_per_office, office_counter*n_ap_per_office+n_ap_per_office))
-        for ap in aps:
-            associations[ap]=list(range(len(aps)+ap*n_cubicle_per_ap*n_sta_per_cubicle, len(aps)+ap*n_cubicle_per_ap*n_sta_per_cubicle+n_cubicle_per_ap*n_sta_per_cubicle))
+        # aps = list(range(office_counter*n_ap_per_office, office_counter*n_ap_per_office+n_ap_per_office))
+        aps = list(range(len(pos), len(pos) + n_ap_per_office))
+        for ap in range(n_ap_per_office):
+            associations[aps[ap]]=list(range(len(pos)+len(aps)+ap*n_cubicle_per_ap*n_sta_per_cubicle,len(pos)+len(aps)+ap*n_cubicle_per_ap*n_sta_per_cubicle+n_cubicle_per_ap*n_sta_per_cubicle))
 
         ap_pos = (jnp.array([[ 5,  5],
                             [15,  5],
@@ -458,15 +461,18 @@ def enterprise_scenario(
         walls_pos.append([x * size_office, y * size_office, x * size_office, (y + 1) * size_office])
 
         pos += ap_pos.tolist()
-        for cubicle in range(n_cubicle_per_ap):
-            pos_key, key = jax.random.split(key)
-            pos += (jax.random.uniform(pos_key, (n_cubicle_per_ap*n_sta_per_cubicle, 2)) * size_office + jnp.array([x * size_office, y * size_office])).tolist()
-
-        office_counter+=1
-
-    print(associations)
-
-    print(len(pos))
+        for ap in range(n_ap_per_office):
+            x_ap, y_ap = ap_pos[ap]
+            for x_q, y_q in [(x_ap-(size_quad+inner_corridor_width/2), y_ap-(size_quad+inner_corridor_width/2)),
+                             (x_ap-(size_quad+inner_corridor_width/2), y_ap+(inner_corridor_width/2)),
+                             (x_ap+(inner_corridor_width/2), y_ap-(size_quad+inner_corridor_width/2)),
+                             (x_ap+(inner_corridor_width/2), y_ap+(inner_corridor_width/2))]:
+                for x_c, y_c in [(x_q, y_q),
+                                 (x_q+size_cubicle, y_q),
+                                 (x_q, y_q+size_cubicle),
+                                 (x_q+size_cubicle, y_q+size_cubicle)]:
+                    pos_key, key = jax.random.split(key)
+                    pos += (jax.random.uniform(pos_key,(n_sta_per_cubicle, 2)) * size_cubicle + jnp.array([x_c, y_c])).tolist()
 
     walls_pos.append([x_offices * size_office, 0, x_offices * size_office, y_offices * size_office])
     walls_pos.append([0, y_offices * size_office, x_offices * size_office, y_offices * size_office])
