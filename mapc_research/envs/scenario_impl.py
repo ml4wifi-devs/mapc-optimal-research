@@ -409,40 +409,67 @@ def test_scenario(scale: float = 1.0) -> StaticScenario:
 
     return StaticScenario(pos, 0, associations, 0, walls_pos=walls_pos)
 
-def residential_scenario(
+def enterprise_scenario(
         seed: int,
         n_steps: int,
-        x_apartments: int,
-        y_apartments: int,
-        n_sta_per_ap: int,
-        size: Scalar,
+        x_offices: int = 1, #TODO update to 4
+        y_offices: int = 1, #TODO update to 2
+        x_cubicles: int = 8,
+        y_cubicles: int = 8,
+        n_sta_per_cubicle: int = 1, #TODO update to 4
+        n_cubicle_per_ap: int = 4, #TODO update to 16
+        n_ap_per_office: int = 4,
+        size_office: Scalar = 20,
+        size_cubicle: Scalar = 2,
         mcs: int = 11
 ) -> StaticScenario:
+    """
+    Implementation of the Enterprise Scenario from S. Merlin et al. "TGax Simulation Scenarios", IEEE 802.11-14/0980r16
+
+    The path loss model of this scenario requires:
+
+    BREAKING_POINT = 10
+    WALL_LOSS = 7
+
+    """
+
+    # Additional variables describing the scenario
+    inner_corridor_width = (size_office - x_cubicles * size_cubicle) / 4
+    outer_corridor_width = inner_corridor_width/2
+
     key = jax.random.PRNGKey(seed)
-    str_repr = f"residential_{seed}_{x_apartments}_{y_apartments}_{n_sta_per_ap}_{size}"
+    str_repr = f"enterprise_{seed}_{x_offices}_{y_offices}_{n_cubicle_per_ap}_{n_sta_per_cubicle}_{size_office}_{size_cubicle}"
     associations, pos, walls_pos = {}, [], []
-    rooms = {}
+    offices, cubicles = {}, {}
 
-    for x, y in product(range(x_apartments), range(y_apartments)):
-        ap, stas = len(pos), list(range(len(pos) + 1, len(pos) + n_sta_per_ap + 1))
-        associations[ap] = stas
-        rooms.update({node: (x, y) for node in stas + [ap]})
+    office_counter = 0
+    for x, y in product(range(x_offices), range(y_offices)):
+        aps = list(range(office_counter*n_ap_per_office, office_counter*n_ap_per_office+n_ap_per_office))
+        for ap in aps:
+            associations[ap]=list(range(len(aps)+ap*n_cubicle_per_ap*n_sta_per_cubicle, len(aps)+ap*n_cubicle_per_ap*n_sta_per_cubicle+n_cubicle_per_ap*n_sta_per_cubicle))
 
-        walls_pos.append([x * size, y * size, (x + 1) * size, y * size])
-        walls_pos.append([x * size, y * size, x * size, (y + 1) * size])
+        ap_pos = (jnp.array([[ 5,  5],
+                            [15,  5],
+                            [ 5, 15],
+                            [15, 15]])
+                  + jnp.array([x * size_office, y * size_office]))
 
-        pos_key, key = jax.random.split(key)
-        pos += (jax.random.uniform(pos_key, (n_sta_per_ap + 1, 2)) * size + jnp.array([x * size, y * size])).tolist()
+        walls_pos.append([x * size_office, y * size_office, (x + 1) * size_office, y * size_office])
+        walls_pos.append([x * size_office, y * size_office, x * size_office, (y + 1) * size_office])
 
-    walls_pos.append([x_apartments * size, 0, x_apartments * size, y_apartments * size])
-    walls_pos.append([0, y_apartments * size, x_apartments * size, y_apartments * size])
-    walls = jnp.zeros((len(pos), len(pos)))
+        pos += ap_pos.tolist()
+        for cubicle in range(n_cubicle_per_ap):
+            pos_key, key = jax.random.split(key)
+            pos += (jax.random.uniform(pos_key, (n_cubicle_per_ap*n_sta_per_cubicle, 2)) * size_office + jnp.array([x * size_office, y * size_office])).tolist()
 
-    for i, j in product(rooms.keys(), repeat=2):
-        xi, yi = rooms[i]
-        xj, yj = rooms[j]
+        office_counter+=1
 
-        walls = walls.at[i, j].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
-        walls = walls.at[j, i].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
+    print(associations)
 
-    return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls=walls, walls_pos=jnp.array(walls_pos), str_repr=str_repr)
+    print(len(pos))
+
+    walls_pos.append([x_offices * size_office, 0, x_offices * size_office, y_offices * size_office])
+    walls_pos.append([0, y_offices * size_office, x_offices * size_office, y_offices * size_office])
+
+
+    return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls_pos=jnp.array(walls_pos), str_repr=str_repr)
