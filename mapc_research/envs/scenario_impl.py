@@ -517,11 +517,59 @@ def indoor_small_bsss_scenario(
             if jnp.sqrt(x_offset ** 2 + y_offset ** 2) <= outer_grid_layer_hexcenter_radius:
                 ap_pos.append((x_offset, y_offset))  # Add center to the list
 
-    # No walls in this scenario
-    # total_nodes = aps + aps*n_sta_per_ap
-    # walls = jnp.zeros((total_nodes, total_nodes))
-    walls = jnp.zeros((19, 19))
+    if frequency_reuse == 3:
+        if grid_layers == 3:
+            ap_pos = [ap_pos[i] for i in [1, 3, 7, 10, 13, 17, 18]]
+        # TODO add support for five layers? This generates more APs then alphabet letters
+        # elif grid_layers == 5:
+        #     ap_pos = [ap_pos[i] for i in [...]]
+        else:
+            print("grid_layer value not supported")
 
-    pos=ap_pos
+    pos += ap_pos
+
+    aps = list(range(len(ap_pos)))
+
+    # Create hexagon vertices
+    theta = jnp.linspace(0, 2 * jnp.pi, 7)
+    x_hex = jnp.cos(theta)
+    y_hex = jnp.sin(theta)
+
+    for ap in range(len(aps)):
+        associations[ap] = list(range(len(pos),len(pos)+n_sta_per_ap))
+        x_ap, y_ap = ap_pos[ap]
+        sta_pos = []
+
+        hexagon = list(zip(x_hex*bss_radius+x_ap, y_hex*bss_radius+y_ap))
+
+        for _ in range(n_sta_per_ap):
+            while True:
+                pos_key, key = jax.random.split(key)
+                x_sta = jax.random.uniform(pos_key, minval = x_ap - bss_radius, maxval = x_ap + bss_radius)
+                pos_key, key = jax.random.split(key)
+                y_sta = jax.random.uniform(pos_key, minval = y_ap - bss_radius * jnp.sqrt(3) / 2, maxval = y_ap + bss_radius * jnp.sqrt(3) / 2)
+                if is_point_in_hexagon(x_sta, y_sta, hexagon):
+                    sta_pos.append((x_sta, y_sta))
+                    break
+        pos += sta_pos
+
+    # No walls in this scenario
+    walls = jnp.zeros((len(pos), len(pos)))
 
     return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls=walls, str_repr=str_repr)
+
+def is_point_in_hexagon(x, y, hexagon):
+    n = len(hexagon)
+    inside = False
+    p1x, p1y = hexagon[0]
+    for i in range(n + 1):
+        p2x, p2y = hexagon[i % n]
+        if y > min(p1y, p2y):
+            if y <= max(p1y, p2y):
+                if x <= max(p1x, p2x):
+                    if p1y != p2y:
+                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                    if p1x == p2x or x <= xinters:
+                        inside = not inside
+        p1x, p1y = p2x, p2y
+    return inside
