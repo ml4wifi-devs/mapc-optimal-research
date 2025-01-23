@@ -7,7 +7,6 @@ from chex import Array, PRNGKey, Scalar
 from mapc_research.envs.static_scenario import StaticScenario
 from mapc_research.envs.dynamic_scenario import DynamicScenario
 
-
 def toy_scenario_1(d: Scalar = 20., mcs: int = 7, n_steps: int = 600) -> StaticScenario:
     """
     STA 1     AP A     STA 2     STA 3     AP B     STA 4
@@ -479,3 +478,50 @@ def enterprise_scenario(
 
 
     return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls_pos=jnp.array(walls_pos), str_repr=str_repr)
+
+def indoor_small_bsss_scenario(
+        seed: int,
+        n_steps: int,
+        grid_layers: int = 3,
+        n_sta_per_ap: int = 30,
+        frequency_reuse: int = 1,
+        bss_radius: int = 10,
+        mcs: int = 11
+) -> StaticScenario:
+    """
+    Implementation of the Indoor Small BSSs Scenario from S. Merlin et al. "TGax Simulation Scenarios", IEEE 802.11-14/0980r16
+
+    The path loss model of this scenario requires:
+
+    BREAKING_POINT = 10
+
+    """
+
+    inter_bss_distance = 2 * (bss_radius ** 2 - bss_radius ** 2 / 4) ** 0.5
+
+    key = jax.random.PRNGKey(seed)
+    str_repr = f"indoor_small_bsss_{seed}_{bss_radius}_{n_sta_per_ap}_{frequency_reuse}_{grid_layers}"
+    associations, pos = {}, []
+
+    # Calculate the number of rows and columns needed to fill the outer_grid_layer_hexcenter_radius
+    outer_grid_layer_hexcenter_radius = (grid_layers - 1) * inter_bss_distance
+    rows = int(outer_grid_layer_hexcenter_radius / (bss_radius * jnp.sqrt(3))) + 1
+    cols = int(outer_grid_layer_hexcenter_radius / (bss_radius * 3 / 2)) + 1
+
+    ap_pos = []  # List to store the centers of hexagons where the APs are
+
+    for row in range(-rows, rows + 1):
+        for col in range(-cols, cols + 1):
+            x_offset = bss_radius * 3 / 2 * col
+            y_offset = bss_radius * jnp.sqrt(3) * (row + 0.5 * (col % 2))
+            if jnp.sqrt(x_offset ** 2 + y_offset ** 2) <= outer_grid_layer_hexcenter_radius:
+                ap_pos.append((x_offset, y_offset))  # Add center to the list
+
+    # No walls in this scenario
+    # total_nodes = aps + aps*n_sta_per_ap
+    # walls = jnp.zeros((total_nodes, total_nodes))
+    walls = jnp.zeros((19, 19))
+
+    pos=ap_pos
+
+    return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls=walls, str_repr=str_repr)
