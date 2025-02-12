@@ -21,7 +21,6 @@ def toy_scenario_1(d: Scalar = 20., mcs: int = 7, n_steps: int = 600) -> StaticS
         [3 * d, 0.],  # STA 3
         [4 * d, 0.],  # AP B
         [5 * d, 0.]   # STA 4
-
     ])
 
     associations = {
@@ -269,7 +268,7 @@ def residential_scenario(
         jnp.array(pos), mcs, associations, n_steps,
         walls=walls,
         walls_pos=jnp.array(walls_pos),
-        path_loss_fn=enterprise_tgax_path_loss,
+        path_loss_fn=residential_tgax_path_loss,
         str_repr=str_repr
     )
 
@@ -478,7 +477,7 @@ def enterprise_scenario(
     return StaticScenario(
         jnp.array(pos), mcs, associations, n_steps,
         walls_pos=jnp.array(walls_pos),
-        path_loss_fn=residential_tgax_path_loss,
+        path_loss_fn=enterprise_tgax_path_loss,
         str_repr=str_repr
     )
 
@@ -587,6 +586,6 @@ def indoor_small_bsss_scenario(
     return StaticScenario(
         jnp.array(pos), mcs, associations, n_steps,
         walls=walls,
-        path_loss_fn=residential_tgax_path_loss,
+        path_loss_fn=enterprise_tgax_path_loss,
         str_repr=str_repr
     )
