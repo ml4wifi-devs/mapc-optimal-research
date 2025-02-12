@@ -1,11 +1,12 @@
 from functools import partial
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 import jax
 import jax.numpy as jnp
 from chex import Array, Scalar, PRNGKey
 from mapc_sim.sim import network_data_rate
 from mapc_sim.constants import DEFAULT_TX_POWER, DEFAULT_SIGMA, DATA_RATES, TAU
+from mapc_sim.utils import default_path_loss
 
 from mapc_research.envs.scenario import Scenario
 
@@ -35,6 +36,13 @@ class StaticScenario(Scenario):
         Two dimensional array of wall positions. Each row corresponds to X and Y coordinates of a wall.
     tx_power_delta: Scalar
         Difference in transmission power between the tx power levels.
+    path_loss_fn: Callable
+        A function that calculates the path loss between two nodes. The function signature should be
+        `path_loss_fn(distance: Array, walls: Array) -> Array`, where `distance` is the matrix of distances
+        between nodes and `walls` is the adjacency matrix of walls. By default, the simulator uses the
+        residential TGax path loss model.
+    str_repr: str
+        String representation of the scenario.
     """
 
     def __init__(
@@ -48,9 +56,11 @@ class StaticScenario(Scenario):
             walls: Optional[Array] = None,
             walls_pos: Optional[Array] = None,
             tx_power_delta: Scalar = 3.0,
+            path_loss_fn: Callable = default_path_loss,
             str_repr: str = ""
     ) -> None:
-        super().__init__(associations, pos, walls, walls_pos)
+        self.str_repr = "static_" + str_repr if str_repr else "static"
+        super().__init__(associations, pos, walls, walls_pos, path_loss_fn, self.str_repr)
 
         self.pos = pos
         self.mcs = mcs
@@ -64,14 +74,10 @@ class StaticScenario(Scenario):
             pos=self.pos,
             mcs=None,
             sigma=self.sigma,
-            walls=self.walls
+            walls=self.walls,
+            path_loss_fn=self.path_loss_fn
         ))
         self.normalize_reward = DATA_RATES[-1]
-
-        self.str_repr = "static_" + str_repr if str_repr else "static"
-    
-    def __str__(self):
-        return self.str_repr
 
     def __call__(self, key: PRNGKey, tx: Array, tx_power: Optional[Array] = None) -> tuple[Scalar, Scalar]:
         if tx_power is None:

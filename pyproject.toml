@@ -22,7 +22,7 @@ authors = [
   {name = "Szymon Szott", email = "szymon.szott@agh.edu.pl"},
 ]
 
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
   "chex~=0.1.86",
   "jax~=0.4.30",
@@ -31,7 +31,7 @@ dependencies = [
   "mapc-dcf~=0.2.0",
   "mapc_mab@git+https://github.com/ml4wifi-devs/mapc-mab",
   "mapc-optimal~=0.1.1",
-  "mapc-sim~=0.1.7",
+  "mapc-sim~=0.1.9",
   "matplotlib~=3.9.3",
   "optuna~=3.6.1",
   "seaborn~=0.13.2",

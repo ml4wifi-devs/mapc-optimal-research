@@ -3,9 +3,11 @@ from itertools import product
 import jax
 import jax.numpy as jnp
 from chex import Array, PRNGKey, Scalar
+from mapc_sim.utils import enterprise_tgax_path_loss, residential_tgax_path_loss
 
 from mapc_research.envs.static_scenario import StaticScenario
 from mapc_research.envs.dynamic_scenario import DynamicScenario
+
 
 def toy_scenario_1(d: Scalar = 20., mcs: int = 7, n_steps: int = 600) -> StaticScenario:
     """
@@ -30,7 +32,7 @@ def toy_scenario_1(d: Scalar = 20., mcs: int = 7, n_steps: int = 600) -> StaticS
     return StaticScenario(pos, mcs, associations, n_steps, str_repr="toy_scenario_1")
 
 
-def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., mcs: int = 11, n_steps : int = 600) -> StaticScenario:
+def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., mcs: int = 11, n_steps: int = 600) -> StaticScenario:
     """
     STA 16   STA 15                  STA 12   STA 11
 
@@ -263,26 +265,24 @@ def residential_scenario(
         walls = walls.at[i, j].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
         walls = walls.at[j, i].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
 
-    return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls=walls, walls_pos=jnp.array(walls_pos), str_repr=str_repr)
+    return StaticScenario(
+        jnp.array(pos), mcs, associations, n_steps,
+        walls=walls,
+        walls_pos=jnp.array(walls_pos),
+        path_loss_fn=enterprise_tgax_path_loss,
+        str_repr=str_repr
+    )
 
 
-def distance_scenario(
-        d: Scalar,
-        n_steps: int,
-        mcs: int = 11
-) -> StaticScenario:
+def distance_scenario(d: Scalar, n_steps: int, mcs: int = 11) -> StaticScenario:
     """
     There is a single AP with a single STA placed at distance `d`. 
     """
-    
+
     return StaticScenario(jnp.array([[0., 0.], [d, 0.]]), mcs, {0: [1]}, n_steps, str_repr=f"distance_{d}")
 
 
-def hidden_station_scenario(
-        d: Scalar,
-        n_steps: int,
-        mcs: int = 4
-) -> StaticScenario:
+def hidden_station_scenario(d: Scalar, n_steps: int, mcs: int = 4) -> StaticScenario:
     """
     There are two APs 2 distance units `d` apart. Both APs have a single
     station placed in between them in the same place.
@@ -291,10 +291,10 @@ def hidden_station_scenario(
     """
 
     pos = jnp.array([
-        [0., 0.],       # AP A
-        [d, 0.],        # STA 1
-        [d, 0.],        # STA 2
-        [2 * d, 0.]     # AP B
+        [0., 0.],  # AP A
+        [d, 0.],  # STA 1
+        [d, 0.],  # STA 2
+        [2 * d, 0.]  # AP B
     ])
 
     associations = {
@@ -305,11 +305,7 @@ def hidden_station_scenario(
     return StaticScenario(pos, mcs, associations, n_steps, str_repr=f"hidden_station_{d}")
 
 
-def flow_in_the_middle_scenario(
-        d: Scalar,
-        n_steps: int,
-        mcs: int = 4,
-) -> StaticScenario:
+def flow_in_the_middle_scenario(d: Scalar, n_steps: int, mcs: int = 4, ) -> StaticScenario:
     """
     There are thres APs placed in line spaced `d` units apart. Each AP is associated with a single STA,
     placed in the same place as the AP.
@@ -318,12 +314,12 @@ def flow_in_the_middle_scenario(
     """
 
     pos = jnp.array([
-        [0., 0.],       # AP A
-        [0., 0.],       # STA 1
-        [d, 0.],        # AP B
-        [d, 0.],        # STA 2
-        [2 * d, 0.],    # AP C
-        [2 * d, 0.]     # STA 3
+        [0., 0.],     # AP A
+        [0., 0.],     # STA 1
+        [1 * d, 0.],  # AP B
+        [1 * d, 0.],  # STA 2
+        [2 * d, 0.],  # AP C
+        [2 * d, 0.],  # STA 3
     ])
 
     associations = {
@@ -335,12 +331,7 @@ def flow_in_the_middle_scenario(
     return StaticScenario(pos, mcs, associations, n_steps, str_repr=f"flow_in_the_middle_{d}")
 
 
-def dense_point_scenario(
-        n_ap: int,
-        n_associations: int,
-        n_steps: int,
-        mcs: int = 11,
-) -> StaticScenario:
+def dense_point_scenario(n_ap: int, n_associations: int, n_steps: int, mcs: int = 11) -> StaticScenario:
     """
     There is `n_ap` APs with `n_associations` STAs each. All of the devices are placed at the same point. 
     """
@@ -348,7 +339,7 @@ def dense_point_scenario(
     pos = jnp.array([[0., 0.] for _ in range(n_ap * (n_associations + 1))])
 
     associations = {i: [n_ap + i * n_associations + j for j in range(n_associations)] for i in range(n_ap)}
-    
+
     return StaticScenario(pos, mcs, associations, n_steps, str_repr=f"dense_point_{n_ap}_{n_associations}")
 
 
@@ -361,7 +352,7 @@ def spatial_reuse_scenario(d_ap: Scalar, d_sta: Scalar, mcs: int = 7, n_steps: i
         [0., 0.],               # STA 1
         [d_sta, 0.],            # AP A
         [d_sta + d_ap, 0.],     # AP B
-        [2*d_sta + d_ap, 0.]    # STA 2
+        [2 * d_sta + d_ap, 0.]  # STA 2
     ])
 
     associations = {
@@ -375,21 +366,21 @@ def spatial_reuse_scenario(d_ap: Scalar, d_sta: Scalar, mcs: int = 7, n_steps: i
 def test_scenario(scale: float = 1.0) -> StaticScenario:
     """
 
-             STA 1     AP A     STA 2
+            STA 1    AP A    STA 2
 
 
-    -----------------------------------------
+    --------------------------------------
 
 
 
-    AP B    STA 3               STA 4    AP C
+    AP B    STA 3            STA 4    AP C
 
     """
 
     pos = scale * jnp.array([
-        [ 0.,  1.],  # AP A
-        [-1., -1.],  # AP B
-        [ 1., -1.],  # AP C
+        [  0.,  1.],  # AP A
+        [ -1., -1.],  # AP B
+        [  1., -1.],  # AP C
         [-0.5,  1.],  # STA 1
         [ 0.5,  1.],  # STA 2
         [-0.5, -1.],  # STA 3
@@ -407,6 +398,7 @@ def test_scenario(scale: float = 1.0) -> StaticScenario:
     ])
 
     return StaticScenario(pos, 0, associations, 0, walls_pos=walls_pos)
+
 
 def enterprise_scenario(
         seed: int,
@@ -437,7 +429,7 @@ def enterprise_scenario(
     # Additional variables describing the scenario
     inner_corridor_width = 1
     # outer_corridor_width = 0.5
-    size_quad = 2*size_cubicle
+    size_quad = 2 * size_cubicle
 
     key = jax.random.PRNGKey(seed)
     str_repr = f"enterprise_{seed}_{x_offices}_{y_offices}_{n_cubicle_per_ap}_{n_sta_per_cubicle}_{size_office}_{size_cubicle}"
@@ -448,36 +440,48 @@ def enterprise_scenario(
         # aps = list(range(office_counter*n_ap_per_office, office_counter*n_ap_per_office+n_ap_per_office))
         aps = list(range(len(pos), len(pos) + n_ap_per_office))
         for ap in range(n_ap_per_office):
-            associations[aps[ap]]=list(range(len(pos)+len(aps)+ap*n_cubicle_per_ap*n_sta_per_cubicle,len(pos)+len(aps)+ap*n_cubicle_per_ap*n_sta_per_cubicle+n_cubicle_per_ap*n_sta_per_cubicle))
+            associations[aps[ap]] = list(range(
+                len(pos) + len(aps) + ap * n_cubicle_per_ap * n_sta_per_cubicle,
+                len(pos) + len(aps) + ap * n_cubicle_per_ap * n_sta_per_cubicle + n_cubicle_per_ap * n_sta_per_cubicle
+            ))
 
-        ap_pos = (jnp.array([[ 5,  5],
-                            [15,  5],
-                            [ 5, 15],
-                            [15, 15]])
-                  + jnp.array([x * size_office, y * size_office]))
+        ap_pos = (
+            jnp.array([[5, 5], [15, 5], [5, 15], [15, 15]]) + jnp.array([x * size_office, y * size_office])
+        )
 
         walls_pos.append([x * size_office, y * size_office, (x + 1) * size_office, y * size_office])
         walls_pos.append([x * size_office, y * size_office, x * size_office, (y + 1) * size_office])
 
         pos += ap_pos.tolist()
+
         for ap in range(n_ap_per_office):
             x_ap, y_ap = ap_pos[ap]
-            for x_q, y_q in [(x_ap-(size_quad+inner_corridor_width/2), y_ap-(size_quad+inner_corridor_width/2)),
-                             (x_ap-(size_quad+inner_corridor_width/2), y_ap+(inner_corridor_width/2)),
-                             (x_ap+(inner_corridor_width/2), y_ap-(size_quad+inner_corridor_width/2)),
-                             (x_ap+(inner_corridor_width/2), y_ap+(inner_corridor_width/2))]:
-                for x_c, y_c in [(x_q, y_q),
-                                 (x_q+size_cubicle, y_q),
-                                 (x_q, y_q+size_cubicle),
-                                 (x_q+size_cubicle, y_q+size_cubicle)]:
+
+            for x_q, y_q in [
+                (x_ap - (size_quad + inner_corridor_width / 2), y_ap - (size_quad + inner_corridor_width / 2)),
+                (x_ap - (size_quad + inner_corridor_width / 2), y_ap + (inner_corridor_width / 2)),
+                (x_ap + (inner_corridor_width / 2), y_ap - (size_quad + inner_corridor_width / 2)),
+                (x_ap + (inner_corridor_width / 2), y_ap + (inner_corridor_width / 2))
+            ]:
+                for x_c, y_c in [
+                    (x_q, y_q),
+                    (x_q + size_cubicle, y_q),
+                    (x_q, y_q + size_cubicle),
+                    (x_q + size_cubicle, y_q + size_cubicle)
+                ]:
                     pos_key, key = jax.random.split(key)
-                    pos += (jax.random.uniform(pos_key,(n_sta_per_cubicle, 2)) * size_cubicle + jnp.array([x_c, y_c])).tolist()
+                    pos += (jax.random.uniform(pos_key, (n_sta_per_cubicle, 2)) * size_cubicle + jnp.array([x_c, y_c])).tolist()
 
     walls_pos.append([x_offices * size_office, 0, x_offices * size_office, y_offices * size_office])
     walls_pos.append([0, y_offices * size_office, x_offices * size_office, y_offices * size_office])
 
+    return StaticScenario(
+        jnp.array(pos), mcs, associations, n_steps,
+        walls_pos=jnp.array(walls_pos),
+        path_loss_fn=residential_tgax_path_loss,
+        str_repr=str_repr
+    )
 
-    return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls_pos=jnp.array(walls_pos), str_repr=str_repr)
 
 def indoor_small_bsss_scenario(
         seed: int,
@@ -494,8 +498,29 @@ def indoor_small_bsss_scenario(
     The path loss model of this scenario requires:
 
     BREAKING_POINT = 10
+    WALL_LOSS = 7
 
     """
+
+    def is_point_in_hexagon(x, y, hexagon):
+        n = len(hexagon)
+        inside = False
+        p1x, p1y = hexagon[0]
+
+        for i in range(n + 1):
+            p2x, p2y = hexagon[i % n]
+
+            if y > min(p1y, p2y):
+                if y <= max(p1y, p2y):
+                    if x <= max(p1x, p2x):
+                        if p1y != p2y:
+                            xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                        if p1x == p2x or x <= xinters:
+                            inside = not inside
+
+            p1x, p1y = p2x, p2y
+
+        return inside
 
     inter_bss_distance = 2 * (bss_radius ** 2 - bss_radius ** 2 / 4) ** 0.5
 
@@ -536,40 +561,32 @@ def indoor_small_bsss_scenario(
     y_hex = jnp.sin(theta)
 
     for ap in range(len(aps)):
-        associations[ap] = list(range(len(pos),len(pos)+n_sta_per_ap))
+        associations[ap] = list(range(len(pos), len(pos) + n_sta_per_ap))
         x_ap, y_ap = ap_pos[ap]
         sta_pos = []
 
-        hexagon = list(zip(x_hex*bss_radius+x_ap, y_hex*bss_radius+y_ap))
+        hexagon = list(zip(x_hex * bss_radius + x_ap, y_hex * bss_radius + y_ap))
 
         for _ in range(n_sta_per_ap):
             while True:
                 pos_key, key = jax.random.split(key)
-                x_sta = jax.random.uniform(pos_key, minval = x_ap - bss_radius, maxval = x_ap + bss_radius)
+                x_sta = jax.random.uniform(pos_key, minval=x_ap - bss_radius, maxval=x_ap + bss_radius)
+
                 pos_key, key = jax.random.split(key)
-                y_sta = jax.random.uniform(pos_key, minval = y_ap - bss_radius * jnp.sqrt(3) / 2, maxval = y_ap + bss_radius * jnp.sqrt(3) / 2)
+                y_sta = jax.random.uniform(pos_key, minval=y_ap - bss_radius * jnp.sqrt(3) / 2, maxval=y_ap + bss_radius * jnp.sqrt(3) / 2)
+
                 if is_point_in_hexagon(x_sta, y_sta, hexagon):
                     sta_pos.append((x_sta, y_sta))
                     break
+
         pos += sta_pos
 
     # No walls in this scenario
     walls = jnp.zeros((len(pos), len(pos)))
 
-    return StaticScenario(jnp.array(pos), mcs, associations, n_steps, walls=walls, str_repr=str_repr)
-
-def is_point_in_hexagon(x, y, hexagon):
-    n = len(hexagon)
-    inside = False
-    p1x, p1y = hexagon[0]
-    for i in range(n + 1):
-        p2x, p2y = hexagon[i % n]
-        if y > min(p1y, p2y):
-            if y <= max(p1y, p2y):
-                if x <= max(p1x, p2x):
-                    if p1y != p2y:
-                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                    if p1x == p2x or x <= xinters:
-                        inside = not inside
-        p1x, p1y = p2x, p2y
-    return inside
+    return StaticScenario(
+        jnp.array(pos), mcs, associations, n_steps,
+        walls=walls,
+        path_loss_fn=residential_tgax_path_loss,
+        str_repr=str_repr
+    )

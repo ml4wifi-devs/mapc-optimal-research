@@ -2,12 +2,12 @@ import string
 from abc import ABC, abstractmethod
 from itertools import chain
 from itertools import product
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 from chex import Array, Scalar
-from mapc_sim.utils import tgax_path_loss as path_loss
+from mapc_sim.utils import default_path_loss
 
 from mapc_research.plots.config import get_cmap
 
@@ -27,6 +27,13 @@ class Scenario(ABC):
     walls_pos: Optional[Array]
         Two dimensional array of wall positions. Each row corresponds to the X and Y coordinates of
         the wall start and end points.
+    path_loss_fn: Callable
+        A function that calculates the path loss between two nodes. The function signature should be
+        `path_loss_fn(distance: Array, walls: Array) -> Array`, where `distance` is the matrix of distances
+        between nodes and `walls` is the adjacency matrix of walls. By default, the simulator uses the
+        residential TGax path loss model.
+    str_repr: str
+        String representation of the scenario.
     """
 
     def __init__(
@@ -34,7 +41,9 @@ class Scenario(ABC):
             associations: Dict,
             pos: Array,
             walls: Optional[Array] = None,
-            walls_pos: Optional[Array] = None
+            walls_pos: Optional[Array] = None,
+            path_loss_fn: Callable = default_path_loss,
+            str_repr: str = ""
     ) -> None:
         self.CCA_THRESHOLD = -82.0  # IEEE Std 802.11-2020 (Revision of IEEE Std 802.11-2016), 17.3.10.6: CCA requirements
 
@@ -42,6 +51,12 @@ class Scenario(ABC):
         self.pos = pos
         self.walls_pos = walls_pos if walls_pos is not None else []
         self.walls = walls if walls is not None else self._calculate_walls_matrix()
+        self.path_loss_fn = path_loss_fn
+
+        self.str_repr = str_repr
+
+    def __str__(self):
+        return self.str_repr
 
     @abstractmethod
     def __call__(self, *args, **kwargs) -> tuple[Scalar, Scalar]:
@@ -100,6 +115,22 @@ class Scenario(ABC):
     def get_associations(self) -> Dict:
         return self.associations
 
+    @staticmethod
+    def _generate_letter_sequence(n):
+        seq = []
+        length = 1
+
+        while len(seq) < n:
+            for combination in product(string.ascii_uppercase, repeat=length):
+                seq.append("".join(combination))
+
+                if len(seq) == n:
+                    return seq
+
+            length += 1
+
+        return seq
+
     def plot(self, pos: Array, filename: str = None) -> None:
         """
         Plots the current state of the scenario.
@@ -112,7 +143,7 @@ class Scenario(ABC):
         """
 
         colors = get_cmap(len(self.associations))
-        ap_labels = string.ascii_uppercase
+        ap_labels = self._generate_letter_sequence(len(self.associations))
 
         _, ax = plt.subplots()
 
@@ -169,7 +200,7 @@ class Scenario(ABC):
         ap_walls = self.walls[ap_ids][:, ap_ids]
 
         distance = np.sqrt(np.sum((ap_pos[:, None, :] - ap_pos[None, ...]) ** 2, axis=-1))
-        signal_power = ap_tx_power - path_loss(distance, ap_walls)
+        signal_power = ap_tx_power - self.path_loss_fn(distance, ap_walls)
         signal_power = np.where(np.isnan(signal_power), np.inf, signal_power)
 
         return np.all(signal_power > self.CCA_THRESHOLD)

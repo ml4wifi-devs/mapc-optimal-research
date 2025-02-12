@@ -1,11 +1,12 @@
 from functools import partial
-from typing import Optional
+from typing import Callable, Optional
 
 import jax
 import jax.numpy as jnp
 from chex import Array, Scalar, PRNGKey
 from mapc_sim.constants import DEFAULT_TX_POWER, DEFAULT_SIGMA, DATA_RATES, TAU
 from mapc_sim.sim import network_data_rate
+from mapc_sim.utils import default_path_loss
 
 from mapc_research.envs.scenario import Scenario
 from mapc_research.envs.static_scenario import StaticScenario
@@ -47,6 +48,13 @@ class DynamicScenario(Scenario):
         Array of wall positions after the change.
     tx_power_delta: Scalar
         Difference in transmission power between the tx power levels.
+    path_loss_fn: Callable
+        A function that calculates the path loss between two nodes. The function signature should be
+        `path_loss_fn(distance: Array, walls: Array) -> Array`, where `distance` is the matrix of distances
+        between nodes and `walls` is the adjacency matrix of walls. By default, the simulator uses the
+        residential TGax path loss model.
+    str_repr: str
+        String representation of the scenario.
     """
 
     def __init__(
@@ -67,9 +75,11 @@ class DynamicScenario(Scenario):
             walls_pos_sec: Optional[Array] = None,
             switch_steps: Optional[list] = None,
             tx_power_delta: Scalar = 3.0,
+            path_loss_fn: Callable = default_path_loss,
             str_repr: str = ""
     ) -> None:
-        super().__init__(associations, pos, walls, walls_pos)
+        self.str_repr = "dynamic_" + str_repr if str_repr else "dynamic"
+        super().__init__(associations, pos, walls, walls_pos, path_loss_fn, self.str_repr)
 
         if walls is None:
             walls = jnp.zeros((pos.shape[0], pos.shape[0]))
@@ -81,7 +91,8 @@ class DynamicScenario(Scenario):
             pos=pos,
             mcs=None,
             sigma=sigma,
-            walls=walls
+            walls=walls,
+            path_loss_fn=path_loss_fn
         ))
         self.normalize_reward_first = DATA_RATES[-1]
         self.tx_power_first = jnp.full(pos.shape[0], tx_power)
@@ -104,7 +115,8 @@ class DynamicScenario(Scenario):
             pos=pos_sec,
             mcs=None,
             sigma=sigma_sec,
-            walls=walls_sec
+            walls=walls_sec,
+            path_loss_fn=path_loss_fn
         ))
         self.normalize_reward_sec = DATA_RATES[-1]
         self.tx_power_sec = jnp.full(pos_sec.shape[0], tx_power_sec)
@@ -119,11 +131,6 @@ class DynamicScenario(Scenario):
         self.switch_steps = switch_steps
         self.step = 0
         self.tx_power_delta = tx_power_delta
-
-        self.str_repr = "dynamic_" + str_repr if str_repr else "dynamic"
-    
-    def __str__(self):
-        return self.str_repr
 
     def __call__(self, key: PRNGKey, tx: Array, tx_power: Array) -> tuple[Scalar, Scalar]:
         if tx_power is None:
