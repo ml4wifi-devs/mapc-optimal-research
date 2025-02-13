@@ -410,8 +410,8 @@ def test_scenario(scale: float = 1.0) -> StaticScenario:
 def enterprise_scenario(
         seed: int,
         n_steps: int,
-        x_offices: int = 2,
-        y_offices: int = 1,
+        x_offices: int = 4,
+        y_offices: int = 2,
         x_cubicles: int = 8,
         y_cubicles: int = 8,
         n_sta_per_cubicle: int = 4,
@@ -430,6 +430,18 @@ def enterprise_scenario(
 
     BREAKING_POINT = 10
     WALL_LOSS = 7
+
+    Suggested parameter ranges:
+
+    x_offices: 1..4
+    y_offices: 1..2
+    x_cubicles: 8
+    y_cubicles: 8
+    n_sta_per_cubicle: 1..4
+    n_cubicle_per_ap: 16
+    n_ap_per_office: 4
+    size_office: 20
+    size_cubicle: 2    
 
     """
 
