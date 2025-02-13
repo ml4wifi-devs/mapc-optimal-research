@@ -221,10 +221,10 @@ def random_scenario(
 def residential_scenario(
         seed: int,
         n_steps: int,
-        x_apartments: int,
-        y_apartments: int,
-        n_sta_per_ap: int,
-        size: Scalar,
+        x_apartments: int = 10,
+        y_apartments: int = 2,
+        n_sta_per_ap: int = 2,
+        size: Scalar = 10,
         mcs: int = 11
 ) -> StaticScenario:
     """
@@ -234,6 +234,14 @@ def residential_scenario(
 
     BREAKING_POINT = 5
     WALL_LOSS = 5
+
+    Suggested parameter ranges:
+
+    x_apartments: 2..10
+    y_apartments: 2
+    n_sta_per_ap: 1..10
+    size: 5..10
+    mcs: 0 or 11
 
     """
 
