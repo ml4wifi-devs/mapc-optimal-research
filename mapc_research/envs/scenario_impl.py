@@ -519,6 +519,14 @@ def indoor_small_bsss_scenario(
     BREAKING_POINT = 10
     WALL_LOSS = 7
 
+    Suggested parameter ranges:
+
+    grid_layers: 3 or 5
+    n_sta_per_ap: 5..30
+    frequency_reuse: 1 or 3
+    bss_radius: 10
+    mcs: 0 or 11   
+
     """
 
     def is_point_in_hexagon(x, y, hexagon):
