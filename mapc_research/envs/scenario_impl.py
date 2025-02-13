@@ -441,7 +441,8 @@ def enterprise_scenario(
     n_cubicle_per_ap: 16
     n_ap_per_office: 4
     size_office: 20
-    size_cubicle: 2    
+    size_cubicle: 2
+    mcs: 0 or 11
 
     """
 
