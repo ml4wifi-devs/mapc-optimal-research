@@ -131,7 +131,7 @@ class Scenario(ABC):
 
         return seq
 
-    def plot(self, pos: Array, filename: str = None) -> None:
+    def plot(self, pos: Array, filename: str = None, label_size: int = 10, show_circles: bool = True) -> None:
         """
         Plots the current state of the scenario.
 
@@ -140,6 +140,11 @@ class Scenario(ABC):
         pos : Array
             Two dimensional array of node positions.
         filename : str
+            Filename to save the plot.
+        label_size : int
+            Size of the labels.
+        show_circles : bool
+            If True, circles are drawn around the access points indicating the position of the furthest station.
         """
 
         colors = get_cmap(len(self.associations))
@@ -150,11 +155,12 @@ class Scenario(ABC):
         for i, (ap, stations) in enumerate(self.associations.items()):
             ax.scatter(pos[ap, 0], pos[ap, 1], marker='x', color=colors[i])
             ax.scatter(pos[stations, 0], pos[stations, 1], marker='.', color=colors[i])
-            ax.annotate(f'AP {ap_labels[i]}', (pos[ap, 0], pos[ap, 1] + 2), color=colors[i], va='bottom', ha='center')
+            ax.annotate(f'AP {ap_labels[i]}', (pos[ap, 0], pos[ap, 1] + 2), color=colors[i], va='bottom', ha='center', size=label_size)
 
-            radius = np.max(np.sqrt(np.sum((pos[stations, :] - pos[ap, :]) ** 2, axis=-1)))
-            circle = plt.Circle((pos[ap, 0], pos[ap, 1]), radius * 1.2, fill=False, linewidth=0.5)
-            ax.add_patch(circle)
+            if show_circles:
+                radius = np.max(np.sqrt(np.sum((pos[stations, :] - pos[ap, :]) ** 2, axis=-1)))
+                circle = plt.Circle((pos[ap, 0], pos[ap, 1]), radius * 1.2, fill=False, linewidth=0.5)
+                ax.add_patch(circle)
 
         # Plot walls
         for wall in self.walls_pos:

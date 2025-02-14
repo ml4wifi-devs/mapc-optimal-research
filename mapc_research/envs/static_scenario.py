@@ -90,8 +90,8 @@ class StaticScenario(Scenario):
     def split_scenario(self) -> list[tuple['StaticScenario', float]]:
         return [(self, self.n_steps * TAU)]
 
-    def plot(self, filename: str = None) -> None:
-        super().plot(self.pos, filename)
+    def plot(self, filename: str = None, label_size: int = 10, show_circles: bool = True) -> None:
+        super().plot(self.pos, filename, label_size, show_circles)
 
     def is_cca_single_tx(self) -> bool:
         return super().is_cca_single_tx(self.pos, self.tx_power)
