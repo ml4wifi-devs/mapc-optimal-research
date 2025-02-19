@@ -451,16 +451,16 @@ def enterprise_scenario(
     key = jax.random.PRNGKey(seed)
     str_repr = f"enterprise_{seed}_{x_offices}_{y_offices}_{n_cubicle_per_ap}_{n_sta_per_cubicle}_{size_office}_{size_cubicle}"
     associations, pos, walls_pos = {}, [], []
-    offices, cubicles = {}, {}
+    offices = {}
 
     for x, y in product(range(x_offices), range(y_offices)):
-        # aps = list(range(office_counter*n_ap_per_office, office_counter*n_ap_per_office+n_ap_per_office))
         aps = list(range(len(pos), len(pos) + n_ap_per_office))
         for ap in range(n_ap_per_office):
             associations[aps[ap]] = list(range(
                 len(pos) + len(aps) + ap * n_cubicle_per_ap * n_sta_per_cubicle,
                 len(pos) + len(aps) + ap * n_cubicle_per_ap * n_sta_per_cubicle + n_cubicle_per_ap * n_sta_per_cubicle
             ))
+            offices.update({node: (x, y) for node in associations[aps[ap]] + [aps[ap]]})
 
         ap_pos = (
             jnp.array([[5, 5], [15, 5], [5, 15], [15, 15]]) + jnp.array([x * size_office, y * size_office])
@@ -491,11 +491,20 @@ def enterprise_scenario(
 
     walls_pos.append([x_offices * size_office, 0, x_offices * size_office, y_offices * size_office])
     walls_pos.append([0, y_offices * size_office, x_offices * size_office, y_offices * size_office])
+    walls = jnp.zeros((len(pos), len(pos)))
+
+    for i, j in product(offices.keys(), repeat=2):
+        xi, yi = offices[i]
+        xj, yj = offices[j]
+
+        walls = walls.at[i, j].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
+        walls = walls.at[j, i].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
 
     return StaticScenario(
         jnp.array(pos),
         associations,
         n_steps=n_steps,
+        walls=walls,
         walls_pos=jnp.array(walls_pos),
         path_loss_fn=enterprise_tgax_path_loss,
         str_repr=str_repr
