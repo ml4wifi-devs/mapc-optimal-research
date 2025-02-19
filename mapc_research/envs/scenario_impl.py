@@ -9,7 +9,7 @@ from mapc_research.envs.static_scenario import StaticScenario
 from mapc_research.envs.dynamic_scenario import DynamicScenario
 
 
-def toy_scenario_1(d: Scalar = 20., mcs: int = 7, n_steps: int = 600) -> StaticScenario:
+def toy_scenario_1(d: Scalar = 20., n_steps: int = 600) -> StaticScenario:
     """
     STA 1     AP A     STA 2     STA 3     AP B     STA 4
     """
@@ -28,10 +28,10 @@ def toy_scenario_1(d: Scalar = 20., mcs: int = 7, n_steps: int = 600) -> StaticS
         4: [3, 5]
     }
 
-    return StaticScenario(pos, mcs, associations, n_steps, str_repr="toy_scenario_1")
+    return StaticScenario(pos, associations, n_steps, str_repr="toy_scenario_1")
 
 
-def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., mcs: int = 11, n_steps: int = 600) -> StaticScenario:
+def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., n_steps: int = 600) -> StaticScenario:
     """
     STA 16   STA 15                  STA 12   STA 11
 
@@ -68,10 +68,10 @@ def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., mcs: int = 11, n_step
         3: [16, 17, 18, 19]
     }
 
-    return StaticScenario(pos, mcs, associations, n_steps, str_repr="toy_scenario_2")
+    return StaticScenario(pos, associations, n_steps, str_repr="toy_scenario_2")
 
 
-def small_office_scenario(d_ap: Scalar, d_sta: Scalar, n_steps, mcs: int = 11) -> StaticScenario:
+def small_office_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int) -> StaticScenario:
     """
     STA 16   STA 15         |        STA 12   STA 11
                             |
@@ -154,7 +154,7 @@ def small_office_scenario(d_ap: Scalar, d_sta: Scalar, n_steps, mcs: int = 11) -
         [d_ap / 2, d_ap / 2, d_ap / 2, d_ap + d_ap / 2],
     ])
 
-    return StaticScenario(pos, mcs, associations, n_steps, walls=walls, walls_pos=walls_pos, str_repr=str_repr)
+    return StaticScenario(pos, associations, n_steps, walls=walls, walls_pos=walls_pos, str_repr=str_repr)
 
 
 def openwifi_scenario():
@@ -181,17 +181,16 @@ def openwifi_scenario():
         2: [7, 8],
     }
 
-    return OpenWifiScenario(pos, 4, associations, 500, str_repr="openwifi")
+    return OpenWifiScenario(pos, associations, 500, str_repr="openwifi")
 
 
 def random_scenario(
         seed: int,
-        n_steps: int,
         d_ap: float,
         n_ap: int,
         d_sta: float,
         n_sta_per_ap: int,
-        mcs: int = 11
+        n_steps: int = float('inf')
 ) -> DynamicScenario:
     def _draw_positions(key: PRNGKey) -> Array:
         ap_key, key = jax.random.split(key)
@@ -215,17 +214,16 @@ def random_scenario(
     pos_first = _draw_positions(key_first)
     pos_sec = _draw_positions(key_sec)
 
-    return DynamicScenario(pos_first, mcs, associations, n_steps, pos_sec=pos_sec, switch_steps=[n_steps // 2], str_repr=str_repr)
+    return DynamicScenario(pos_first, associations, n_steps, pos_sec=pos_sec, switch_steps=[n_steps // 2], str_repr=str_repr)
 
 
 def residential_scenario(
         seed: int,
-        n_steps: int,
         x_apartments: int = 10,
         y_apartments: int = 2,
         n_sta_per_ap: int = 2,
         size: Scalar = 10,
-        mcs: int = 11
+        n_steps: int = float('inf')
 ) -> StaticScenario:
     """
     Implementation of the Residential Scenario from S. Merlin et al. "TGax Simulation Scenarios", IEEE 802.11-14/0980r16
@@ -241,7 +239,6 @@ def residential_scenario(
     y_apartments: 2
     n_sta_per_ap: 1..10
     size: 5..10
-    mcs: 0 or 11
 
     """
 
@@ -273,7 +270,9 @@ def residential_scenario(
         walls = walls.at[j, i].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
 
     return StaticScenario(
-        jnp.array(pos), mcs, associations, n_steps,
+        jnp.array(pos),
+        associations,
+        n_steps=n_steps,
         walls=walls,
         walls_pos=jnp.array(walls_pos),
         path_loss_fn=residential_tgax_path_loss,
@@ -281,15 +280,15 @@ def residential_scenario(
     )
 
 
-def distance_scenario(d: Scalar, n_steps: int, mcs: int = 11) -> StaticScenario:
+def distance_scenario(d: Scalar, n_steps: int) -> StaticScenario:
     """
     There is a single AP with a single STA placed at distance `d`. 
     """
 
-    return StaticScenario(jnp.array([[0., 0.], [d, 0.]]), mcs, {0: [1]}, n_steps, str_repr=f"distance_{d}")
+    return StaticScenario(jnp.array([[0., 0.], [d, 0.]]), {0: [1]}, n_steps, str_repr=f"distance_{d}")
 
 
-def hidden_station_scenario(d: Scalar, n_steps: int, mcs: int = 4) -> StaticScenario:
+def hidden_station_scenario(d: Scalar, n_steps: int) -> StaticScenario:
     """
     There are two APs 2 distance units `d` apart. Both APs have a single
     station placed in between them in the same place.
@@ -309,10 +308,10 @@ def hidden_station_scenario(d: Scalar, n_steps: int, mcs: int = 4) -> StaticScen
         3: [2]
     }
 
-    return StaticScenario(pos, mcs, associations, n_steps, str_repr=f"hidden_station_{d}")
+    return StaticScenario(pos, associations, n_steps, str_repr=f"hidden_station_{d}")
 
 
-def flow_in_the_middle_scenario(d: Scalar, n_steps: int, mcs: int = 4, ) -> StaticScenario:
+def flow_in_the_middle_scenario(d: Scalar, n_steps: int) -> StaticScenario:
     """
     There are thres APs placed in line spaced `d` units apart. Each AP is associated with a single STA,
     placed in the same place as the AP.
@@ -335,10 +334,10 @@ def flow_in_the_middle_scenario(d: Scalar, n_steps: int, mcs: int = 4, ) -> Stat
         4: [5]
     }
 
-    return StaticScenario(pos, mcs, associations, n_steps, str_repr=f"flow_in_the_middle_{d}")
+    return StaticScenario(pos, associations, n_steps, str_repr=f"flow_in_the_middle_{d}")
 
 
-def dense_point_scenario(n_ap: int, n_associations: int, n_steps: int, mcs: int = 11) -> StaticScenario:
+def dense_point_scenario(n_ap: int, n_associations: int, n_steps: int) -> StaticScenario:
     """
     There is `n_ap` APs with `n_associations` STAs each. All of the devices are placed at the same point. 
     """
@@ -347,10 +346,10 @@ def dense_point_scenario(n_ap: int, n_associations: int, n_steps: int, mcs: int 
 
     associations = {i: [n_ap + i * n_associations + j for j in range(n_associations)] for i in range(n_ap)}
 
-    return StaticScenario(pos, mcs, associations, n_steps, str_repr=f"dense_point_{n_ap}_{n_associations}")
+    return StaticScenario(pos, associations, n_steps, str_repr=f"dense_point_{n_ap}_{n_associations}")
 
 
-def spatial_reuse_scenario(d_ap: Scalar, d_sta: Scalar, mcs: int = 7, n_steps: int = 600) -> StaticScenario:
+def spatial_reuse_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int = 600) -> StaticScenario:
     """
     STA 1 <--d_sta--> AP A <--d_ap--> AP B <--d_sta--> STA 4
     """
@@ -367,7 +366,7 @@ def spatial_reuse_scenario(d_ap: Scalar, d_sta: Scalar, mcs: int = 7, n_steps: i
         2: [3]
     }
 
-    return StaticScenario(pos, mcs, associations, n_steps, str_repr="spatial_reuse_scenario")
+    return StaticScenario(pos, associations, n_steps, str_repr="spatial_reuse_scenario")
 
 
 def test_scenario(scale: float = 1.0) -> StaticScenario:
@@ -404,12 +403,11 @@ def test_scenario(scale: float = 1.0) -> StaticScenario:
         [-2.0, 0.0, 2.0, 0.0]
     ])
 
-    return StaticScenario(pos, 0, associations, 0, walls_pos=walls_pos)
+    return StaticScenario(pos, associations, walls_pos=walls_pos)
 
 
 def enterprise_scenario(
         seed: int,
-        n_steps: int,
         x_offices: int = 4,
         y_offices: int = 2,
         x_cubicles: int = 8,
@@ -419,7 +417,7 @@ def enterprise_scenario(
         n_ap_per_office: int = 4,
         size_office: Scalar = 20,
         size_cubicle: Scalar = 2,
-        mcs: int = 11
+        n_steps: int = float('inf')
 ) -> StaticScenario:
     """
     Implementation of the Enterprise Scenario from S. Merlin et al. "TGax Simulation Scenarios", IEEE 802.11-14/0980r16
@@ -442,7 +440,6 @@ def enterprise_scenario(
     n_ap_per_office: 4
     size_office: 20
     size_cubicle: 2
-    mcs: 0 or 11
 
     """
 
@@ -496,7 +493,9 @@ def enterprise_scenario(
     walls_pos.append([0, y_offices * size_office, x_offices * size_office, y_offices * size_office])
 
     return StaticScenario(
-        jnp.array(pos), mcs, associations, n_steps,
+        jnp.array(pos),
+        associations,
+        n_steps=n_steps,
         walls_pos=jnp.array(walls_pos),
         path_loss_fn=enterprise_tgax_path_loss,
         str_repr=str_repr
@@ -505,12 +504,11 @@ def enterprise_scenario(
 
 def indoor_small_bsss_scenario(
         seed: int,
-        n_steps: int,
         grid_layers: int = 3,
         n_sta_per_ap: int = 30,
         frequency_reuse: int = 1,
         bss_radius: int = 10,
-        mcs: int = 11
+        n_steps: int = float('inf')
 ) -> StaticScenario:
     """
     Implementation of the Indoor Small BSSs Scenario from S. Merlin et al. "TGax Simulation Scenarios", IEEE 802.11-14/0980r16
@@ -526,7 +524,6 @@ def indoor_small_bsss_scenario(
     n_sta_per_ap: 5..30
     frequency_reuse: 1 or 3
     bss_radius: 10
-    mcs: 0 or 11   
 
     """
 
@@ -613,7 +610,9 @@ def indoor_small_bsss_scenario(
     walls = jnp.zeros((len(pos), len(pos)))
 
     return StaticScenario(
-        jnp.array(pos), mcs, associations, n_steps,
+        jnp.array(pos),
+        associations,
+        n_steps=n_steps,
         walls=walls,
         path_loss_fn=enterprise_tgax_path_loss,
         str_repr=str_repr

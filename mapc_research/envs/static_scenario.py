@@ -13,15 +13,12 @@ from mapc_research.envs.scenario import Scenario
 
 class StaticScenario(Scenario):
     """
-    Static scenario with fixed node positions, MCS, tx power, and noise standard deviation.
-    The configuration of parallel transmissions is variable.
+    Static scenario with fixed node positions and associations.
 
     Parameters
     ----------
     pos: Array
         Two dimensional array of node positions. Each row corresponds to X and Y coordinates of a node.
-    mcs: int
-        Modulation and coding scheme of the nodes. Each entry corresponds to a node.
     associations: Dict
         Dictionary of associations between access points and stations.
     n_steps: int
@@ -48,9 +45,8 @@ class StaticScenario(Scenario):
     def __init__(
             self,
             pos: Array,
-            mcs: int,
             associations: Dict,
-            n_steps: int,
+            n_steps: int = float('inf'),
             default_tx_power: Scalar = DEFAULT_TX_POWER,
             sigma: Scalar = DEFAULT_SIGMA,
             walls: Optional[Array] = None,
@@ -63,7 +59,6 @@ class StaticScenario(Scenario):
         super().__init__(associations, pos, walls, walls_pos, path_loss_fn, self.str_repr)
 
         self.pos = pos
-        self.mcs = mcs
         self.tx_power = jnp.full(pos.shape[0], default_tx_power)
         self.tx_power_delta = tx_power_delta
         self.n_steps = n_steps

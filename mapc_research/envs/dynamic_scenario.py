@@ -20,8 +20,6 @@ class DynamicScenario(Scenario):
     ----------
     pos: Array
         Two dimensional array of node positions. Each row corresponds to X and Y coordinates of a node.
-    mcs: int
-        Modulation and coding scheme of the nodes. Each entry corresponds to a node.
     associations: dict
         Dictionary of associations between access points and stations.
     n_steps: int
@@ -36,8 +34,6 @@ class DynamicScenario(Scenario):
         Two dimensional array of wall positions. Each row corresponds to X and Y coordinates of a wall.
     pos_sec: Optional[Array]
         Array of node positions after the change.
-    mcs_sec: Optional[int]
-        Modulation and coding scheme of the nodes after the change.
     tx_power_sec: Optional[Scalar]
         Default transmission power of the nodes after the change.
     sigma_sec: Optional[Scalar]
@@ -60,7 +56,6 @@ class DynamicScenario(Scenario):
     def __init__(
             self,
             pos: Array,
-            mcs: int,
             associations: dict,
             n_steps: int,
             tx_power: Scalar = DEFAULT_TX_POWER,
@@ -68,7 +63,6 @@ class DynamicScenario(Scenario):
             walls: Optional[Array] = None,
             walls_pos: Optional[Array] = None,
             pos_sec: Optional[Array] = None,
-            mcs_sec: Optional[int] = None,
             tx_power_sec: Optional[Scalar] = None,
             sigma_sec: Optional[Scalar] = None,
             walls_sec: Optional[Array] = None,
@@ -96,13 +90,10 @@ class DynamicScenario(Scenario):
         ))
         self.normalize_reward_first = DATA_RATES[-1]
         self.tx_power_first = jnp.full(pos.shape[0], tx_power)
-        self.mcs_first = mcs
-        self.scenario_first = StaticScenario(pos, mcs, associations, n_steps, tx_power, sigma, walls, walls_pos, tx_power_delta)
+        self.scenario_first = StaticScenario(pos, associations, n_steps, tx_power, sigma, walls, walls_pos, tx_power_delta)
 
         if pos_sec is None:
             pos_sec = pos.copy()
-        if mcs_sec is None:
-            mcs_sec = mcs
         if tx_power_sec is None:
             tx_power_sec = tx_power
         if sigma_sec is None:
@@ -120,13 +111,11 @@ class DynamicScenario(Scenario):
         ))
         self.normalize_reward_sec = DATA_RATES[-1]
         self.tx_power_sec = jnp.full(pos_sec.shape[0], tx_power_sec)
-        self.mcs_sec = mcs_sec
-        self.scenario_sec = StaticScenario(pos_sec, mcs_sec, associations, n_steps, tx_power_sec, sigma_sec, walls_sec, walls_pos_sec, tx_power_delta)
+        self.scenario_sec = StaticScenario(pos_sec, associations, n_steps, tx_power_sec, sigma_sec, walls_sec, walls_pos_sec, tx_power_delta)
 
         self.data_rate_fn = self.data_rate_fn_first
         self.normalize_reward = self.normalize_reward_first
         self.tx_power = self.tx_power_first
-        self.mcs = self.mcs_first
         self.n_steps = n_steps
         self.switch_steps = switch_steps
         self.step = 0
@@ -168,20 +157,17 @@ class DynamicScenario(Scenario):
         if self.data_rate_fn is self.data_rate_fn_first:
             self.data_rate_fn = self.data_rate_fn_sec
             self.tx_power = self.tx_power_sec
-            self.mcs = self.mcs_sec
             self.normalize_reward = self.normalize_reward_sec
         else:
             self.data_rate_fn = self.data_rate_fn_first
             self.tx_power = self.tx_power_first
-            self.mcs = self.mcs_first
             self.normalize_reward = self.normalize_reward_first
 
     @staticmethod
     def from_static_params(
             scenario: StaticScenario,
-            n_steps: int,
+            n_steps: int = float('inf'),
             pos_sec: Optional[Array] = None,
-            mcs_sec: Optional[int] = None,
             tx_power_sec: Optional[Scalar] = None,
             sigma_sec: Optional[Scalar] = None,
             walls_sec: Optional[Array] = None,
@@ -190,7 +176,6 @@ class DynamicScenario(Scenario):
     ) -> 'DynamicScenario':
         return DynamicScenario(
             scenario.pos,
-            scenario.mcs,
             scenario.associations,
             n_steps,
             scenario.tx_power,
@@ -198,7 +183,6 @@ class DynamicScenario(Scenario):
             scenario.walls,
             scenario.walls_pos,
             pos_sec,
-            mcs_sec,
             tx_power_sec,
             sigma_sec,
             walls_sec,
@@ -212,11 +196,10 @@ class DynamicScenario(Scenario):
             scenario: StaticScenario,
             scenario_sec: StaticScenario,
             switch_steps: list,
-            n_steps: int
+            n_steps: int = float('inf')
     ) -> 'DynamicScenario':
         return DynamicScenario(
             scenario.pos,
-            scenario.mcs,
             scenario.associations,
             n_steps,
             scenario.tx_power,
@@ -224,7 +207,6 @@ class DynamicScenario(Scenario):
             scenario.walls,
             scenario.walls_pos,
             scenario_sec.pos,
-            scenario_sec.mcs,
             scenario_sec.tx_power,
             scenario_sec.sigma,
             scenario_sec.walls,
