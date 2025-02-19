@@ -9,7 +9,7 @@ from mapc_research.envs.static_scenario import StaticScenario
 from mapc_research.envs.dynamic_scenario import DynamicScenario
 
 
-def toy_scenario_1(d: Scalar = 20., n_steps: int = 600) -> StaticScenario:
+def toy_scenario_1(d: Scalar = 20., n_steps: int = 600, **kwargs) -> StaticScenario:
     """
     STA 1     AP A     STA 2     STA 3     AP B     STA 4
     """
@@ -31,7 +31,7 @@ def toy_scenario_1(d: Scalar = 20., n_steps: int = 600) -> StaticScenario:
     return StaticScenario(pos, associations, n_steps, str_repr="toy_scenario_1")
 
 
-def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., n_steps: int = 600) -> StaticScenario:
+def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., n_steps: int = 600, **kwargs) -> StaticScenario:
     """
     STA 16   STA 15                  STA 12   STA 11
 
@@ -71,7 +71,7 @@ def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., n_steps: int = 600) -
     return StaticScenario(pos, associations, n_steps, str_repr="toy_scenario_2")
 
 
-def small_office_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int) -> StaticScenario:
+def small_office_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int, **kwargs) -> StaticScenario:
     """
     STA 16   STA 15         |        STA 12   STA 11
                             |
@@ -280,7 +280,7 @@ def residential_scenario(
     )
 
 
-def distance_scenario(d: Scalar, n_steps: int) -> StaticScenario:
+def distance_scenario(d: Scalar, n_steps: int, **kwargs) -> StaticScenario:
     """
     There is a single AP with a single STA placed at distance `d`. 
     """
@@ -288,7 +288,7 @@ def distance_scenario(d: Scalar, n_steps: int) -> StaticScenario:
     return StaticScenario(jnp.array([[0., 0.], [d, 0.]]), {0: [1]}, n_steps, str_repr=f"distance_{d}")
 
 
-def hidden_station_scenario(d: Scalar, n_steps: int) -> StaticScenario:
+def hidden_station_scenario(d: Scalar, n_steps: int, **kwargs) -> StaticScenario:
     """
     There are two APs 2 distance units `d` apart. Both APs have a single
     station placed in between them in the same place.
@@ -311,7 +311,7 @@ def hidden_station_scenario(d: Scalar, n_steps: int) -> StaticScenario:
     return StaticScenario(pos, associations, n_steps, str_repr=f"hidden_station_{d}")
 
 
-def flow_in_the_middle_scenario(d: Scalar, n_steps: int) -> StaticScenario:
+def flow_in_the_middle_scenario(d: Scalar, n_steps: int, **kwargs) -> StaticScenario:
     """
     There are thres APs placed in line spaced `d` units apart. Each AP is associated with a single STA,
     placed in the same place as the AP.
@@ -337,7 +337,7 @@ def flow_in_the_middle_scenario(d: Scalar, n_steps: int) -> StaticScenario:
     return StaticScenario(pos, associations, n_steps, str_repr=f"flow_in_the_middle_{d}")
 
 
-def dense_point_scenario(n_ap: int, n_associations: int, n_steps: int) -> StaticScenario:
+def dense_point_scenario(n_ap: int, n_associations: int, n_steps: int, **kwargs) -> StaticScenario:
     """
     There is `n_ap` APs with `n_associations` STAs each. All of the devices are placed at the same point. 
     """
@@ -349,7 +349,7 @@ def dense_point_scenario(n_ap: int, n_associations: int, n_steps: int) -> Static
     return StaticScenario(pos, associations, n_steps, str_repr=f"dense_point_{n_ap}_{n_associations}")
 
 
-def spatial_reuse_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int = 600) -> StaticScenario:
+def spatial_reuse_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int = 600, **kwargs) -> StaticScenario:
     """
     STA 1 <--d_sta--> AP A <--d_ap--> AP B <--d_sta--> STA 4
     """
@@ -369,7 +369,7 @@ def spatial_reuse_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int = 600) -> S
     return StaticScenario(pos, associations, n_steps, str_repr="spatial_reuse_scenario")
 
 
-def test_scenario(scale: float = 1.0) -> StaticScenario:
+def test_scenario(scale: float = 1.0, **kwargs) -> StaticScenario:
     """
 
             STA 1    AP A    STA 2
