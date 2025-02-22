@@ -9,33 +9,61 @@ import pulp as plp
 from chex import Array
 from mapc_optimal import Solver, positions_to_path_loss
 from mapc_optimal.constants import DATA_RATES, MAX_TX_POWER
+from tqdm import tqdm
 
 from mapc_research.envs.scenario_impl import *
+from mapc_research.envs.scenario_impl import hidden_station_scenario, flow_in_the_middle_scenario
 
 
-SCENARIOS = [ # TODO: takes too long to generate
-    # (
-    #     residential_scenario,
-    #     {'x_apartments': (2, 11), 'y_apartments': (2, 3), 'n_sta_per_ap': (1, 11), 'size': (5, 11)}
-    # ),
-    # (
-    #     enterprise_scenario,
-    #     {'x_offices': (1, 5), 'y_offices': (1, 3), 'x_cubicles': (8, 9), 'y_cubicles': (8, 9),
-    #      'n_sta_per_cubicle': (1, 5), 'n_cubicle_per_ap': (16, 17), 'n_ap_per_office': (4, 5),
-    #      'size_office': (20, 21), 'size_cubicle': (2, 3)}
-    # ),
-    # (
-    #     indoor_small_bsss_scenario,
-    #     {'grid_layers': (3, 4), 'n_sta_per_ap': (5, 31), 'frequency_reuse': (2, 4), 'bss_radius': (10, 11)}
-    # ),
+SCENARIOS = [  # Note! The values are drawn from the interval [a, b) - a is inclusive, b is exclusive!
     (
         toy_scenario_1,
-        {'d': (20, 51)}
+        {'d': (10, 51)}
     ),
     (
         toy_scenario_2,
-        {'d_ap': (10, 41)}
-    )
+        {'d_ap': (10, 41), 'd_sta': (1, 11)}
+    ),
+    (
+        small_office_scenario,
+        {'d_ap': (10, 41), 'd_sta': (1, 11)}
+    ),
+    (
+        random_scenario,
+        {'d_ap': (20, 101), 'n_ap': (2, 11), 'd_sta': (1, 9), 'n_sta_per_ap': (1, 6), 'randomize': (0, 1)}
+    ),
+    (
+        residential_scenario,
+        {'x_apartments': (2, 6), 'y_apartments': (2, 3), 'n_sta_per_ap': (1, 5), 'size': (5, 21)}
+    ),
+    (
+        distance_scenario,
+        {'d': (1, 51)}
+    ),
+    (
+        hidden_station_scenario,
+        {'d': (21, 51)}
+    ),
+    (
+        flow_in_the_middle_scenario,
+        {'d': (1, 31)}
+    ),
+    (
+        dense_point_scenario,
+        {'n_ap': (2, 11), 'n_associations': (1, 6)}
+    ),
+    (
+        spatial_reuse_scenario,
+        {'d_ap': (10, 21), 'd_sta': (1, 11)}
+    ),
+    (
+        test_scenario,
+        {'scale': (10, 31)}
+    ),
+    (
+        indoor_small_bsss_scenario,
+        {'grid_layers': (3, 4), 'n_sta_per_ap': (3, 11), 'frequency_reuse': (3, 4), 'bss_radius': (5, 21)}
+    ),
 ]
 
 N_TX_POWER_LEVELS = 4
@@ -76,26 +104,33 @@ def load_dataset(path):
         return cloudpickle.loads(f.read())
 
 
-def draw_realizations(n_realizations, key, scenario, param_ranges):
-    for _ in range(n_realizations):
-        key, *subkey, seed_key = jax.random.split(key, len(param_ranges) + 2)
-        params = {p: jax.random.randint(k, (), *v) for (p, v), k in zip(param_ranges.items(), subkey)}
-        seed = jax.random.randint(seed_key, (), 0, 2**30)
+def draw_realizations(key, scenario_fn, param_ranges):
+    *param_keys, seed_key = jax.random.split(key, len(param_ranges) + 1)
+    params = {p: jax.random.randint(k, (), *v) for (p, v), k in zip(param_ranges.items(), param_keys)}
+    seed = jax.random.randint(seed_key, (), 0, 2**30)
+    (scenario, _), *_ = scenario_fn(seed=seed, **params).split_scenario()
 
-        for subscenario, _ in scenario(seed=seed, **params).split_scenario():
-            yield DatasetItem(
-                associations=subscenario.associations,
-                pos=subscenario.pos,
-                walls=subscenario.walls,
-                path_loss_fn=subscenario.path_loss_fn,
-                configurations=[]
-            )
+    yield DatasetItem(
+        associations=scenario.associations,
+        pos=scenario.pos,
+        walls=scenario.walls,
+        path_loss_fn=scenario.path_loss_fn,
+        configurations=[]
+    )
 
 
 def draw_scenarios(n_realizations, key, scenarios):
-    for scenario, param_ranges in scenarios:
+    n_params = list(map(len, [p for _, p in scenarios]))
+    n_params = jnp.asarray(n_params)
+    probs = n_params / n_params.sum()
+
+    key, subkey = jax.random.split(key)
+    scenario_idx = jax.random.choice(subkey, len(scenarios), p=probs, shape=(n_realizations,)).tolist()
+    selected_scenarios = [scenarios[i] for i in scenario_idx]
+
+    for i, (scenario, param_ranges) in enumerate(tqdm(selected_scenarios, desc='Scenarios')):
         key, subkey = jax.random.split(key)
-        yield from draw_realizations(n_realizations, subkey, scenario, param_ranges)
+        yield from draw_realizations(subkey, scenario, param_ranges)
 
 
 def rate_to_mcs(rate):
@@ -121,7 +156,7 @@ def draw_configuration(n_configurations, key, dataset_item):
     stations = list(chain.from_iterable(associations.values()))
     path_loss = positions_to_path_loss(dataset_item.pos, dataset_item.walls)
 
-    solver = Solver(stations, access_points, opt_sum=False, solver=plp.CPLEX_CMD(msg=False))
+    solver = Solver(stations, access_points, opt_sum=True, solver=plp.CPLEX_CMD(msg=False))
     configurations, _ = solver(path_loss, associations)
 
     shares = jnp.array(list(configurations['shares'].values()))
@@ -134,8 +169,7 @@ def draw_configuration(n_configurations, key, dataset_item):
 
 
 def draw_history(n_configurations, key, dataset):
-    from tqdm import tqdm
-    for dataset_item in tqdm(dataset):
+    for dataset_item in tqdm(dataset, desc='Configurations'):
         key, subkey = jax.random.split(key)
         dataset_item.configurations = list(draw_configuration(n_configurations, subkey, dataset_item))
 
@@ -144,8 +178,8 @@ def draw_history(n_configurations, key, dataset):
 
 if __name__ == '__main__':
     seed = 42
-    n_realizations = 10
-    n_configurations = 10
+    n_realizations = 1000
+    n_configurations = 50
 
     key = jax.random.PRNGKey(seed)
     scenarios_key, configurations_key = jax.random.split(key)

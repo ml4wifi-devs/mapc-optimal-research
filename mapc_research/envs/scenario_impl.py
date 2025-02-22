@@ -5,6 +5,7 @@ import jax.numpy as jnp
 from chex import Array, PRNGKey, Scalar
 from mapc_sim.utils import enterprise_tgax_path_loss, residential_tgax_path_loss
 
+from mapc_research.envs.scenario import Scenario
 from mapc_research.envs.static_scenario import StaticScenario
 from mapc_research.envs.dynamic_scenario import DynamicScenario
 
@@ -190,8 +191,9 @@ def random_scenario(
         n_ap: int,
         d_sta: float,
         n_sta_per_ap: int,
-        n_steps: int = float('inf')
-) -> DynamicScenario:
+        n_steps: int = float('inf'),
+        randomize: bool = True
+) -> Scenario:
     def _draw_positions(key: PRNGKey) -> Array:
         ap_key, key = jax.random.split(key)
         ap_pos = jax.random.uniform(ap_key, (n_ap, 2)) * d_ap
@@ -214,7 +216,10 @@ def random_scenario(
     pos_first = _draw_positions(key_first)
     pos_sec = _draw_positions(key_sec)
 
-    return DynamicScenario(pos_first, associations, n_steps, pos_sec=pos_sec, switch_steps=[n_steps // 2], str_repr=str_repr)
+    if randomize:
+        return DynamicScenario(pos_first, associations, n_steps, pos_sec=pos_sec, switch_steps=[n_steps // 2], str_repr=str_repr)
+    else:
+        return StaticScenario(pos_first, associations, n_steps, str_repr=str_repr)
 
 
 def residential_scenario(
@@ -313,10 +318,10 @@ def hidden_station_scenario(d: Scalar, n_steps: int, **kwargs) -> StaticScenario
 
 def flow_in_the_middle_scenario(d: Scalar, n_steps: int, **kwargs) -> StaticScenario:
     """
-    There are thres APs placed in line spaced `d` units apart. Each AP is associated with a single STA,
+    There are three APs placed in line spaced `d` units apart. Each AP is associated with a single STA,
     placed in the same place as the AP.
 
-    AP_A <--d--> STA_1, STA_2 <--d--> AP_B 
+    AP_A, STA_1 <--d--> AP_B, STA_2 <--d--> AP_C, STA_3
     """
 
     pos = jnp.array([
