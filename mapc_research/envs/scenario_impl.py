@@ -72,7 +72,7 @@ def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., n_steps: int = 600, *
     return StaticScenario(pos, associations, n_steps, str_repr="toy_scenario_2")
 
 
-def small_office_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int, **kwargs) -> StaticScenario:
+def small_office_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int = float('inf'), **kwargs) -> StaticScenario:
     """
     STA 16   STA 15         |        STA 12   STA 11
                             |
@@ -285,7 +285,7 @@ def residential_scenario(
     )
 
 
-def distance_scenario(d: Scalar, n_steps: int, **kwargs) -> StaticScenario:
+def distance_scenario(d: Scalar, n_steps: int = float('inf'), **kwargs) -> StaticScenario:
     """
     There is a single AP with a single STA placed at distance `d`. 
     """
@@ -293,7 +293,7 @@ def distance_scenario(d: Scalar, n_steps: int, **kwargs) -> StaticScenario:
     return StaticScenario(jnp.array([[0., 0.], [d, 0.]]), {0: [1]}, n_steps, str_repr=f"distance_{d}")
 
 
-def hidden_station_scenario(d: Scalar, n_steps: int, **kwargs) -> StaticScenario:
+def hidden_station_scenario(d: Scalar, n_steps: int = float('inf'), **kwargs) -> StaticScenario:
     """
     There are two APs 2 distance units `d` apart. Both APs have a single
     station placed in between them in the same place.
@@ -316,7 +316,7 @@ def hidden_station_scenario(d: Scalar, n_steps: int, **kwargs) -> StaticScenario
     return StaticScenario(pos, associations, n_steps, str_repr=f"hidden_station_{d}")
 
 
-def flow_in_the_middle_scenario(d: Scalar, n_steps: int, **kwargs) -> StaticScenario:
+def flow_in_the_middle_scenario(d: Scalar, n_steps: int = float('inf'), **kwargs) -> StaticScenario:
     """
     There are three APs placed in line spaced `d` units apart. Each AP is associated with a single STA,
     placed in the same place as the AP.
@@ -342,7 +342,7 @@ def flow_in_the_middle_scenario(d: Scalar, n_steps: int, **kwargs) -> StaticScen
     return StaticScenario(pos, associations, n_steps, str_repr=f"flow_in_the_middle_{d}")
 
 
-def dense_point_scenario(n_ap: int, n_associations: int, n_steps: int, **kwargs) -> StaticScenario:
+def dense_point_scenario(n_ap: int, n_associations: int, n_steps: int = float('inf'), **kwargs) -> StaticScenario:
     """
     There is `n_ap` APs with `n_associations` STAs each. All of the devices are placed at the same point. 
     """
