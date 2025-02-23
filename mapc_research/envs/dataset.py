@@ -176,14 +176,16 @@ def draw_history(n_configurations, key, dataset):
     return dataset
 
 
-if __name__ == '__main__':
-    seed = 42
-    n_realizations = 1000
-    n_configurations = 50
-
+def generate_dataset(seed, n_realizations, n_configurations, save_path):
     key = jax.random.PRNGKey(seed)
     scenarios_key, configurations_key = jax.random.split(key)
 
     dataset = list(draw_scenarios(n_realizations, scenarios_key, SCENARIOS))
     dataset = draw_history(n_configurations, configurations_key, dataset)
-    save_dataset(dataset, 'dataset.pkl.lz4')
+
+    save_dataset(dataset, save_path)
+
+
+if __name__ == '__main__':
+    generate_dataset(seed=42, n_realizations=1000, n_configurations=50, save_path='dataset.pkl.lz4')
+    generate_dataset(seed=45, n_realizations=200, n_configurations=50, save_path='val_dataset.pkl.lz4')
