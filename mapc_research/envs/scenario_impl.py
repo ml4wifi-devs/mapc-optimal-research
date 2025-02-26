@@ -579,9 +579,8 @@ def indoor_small_bsss_scenario(
     if frequency_reuse == 3:
         if grid_layers == 3:
             ap_pos = [ap_pos[i] for i in [1, 3, 7, 10, 13, 17, 18]]
-        # TODO add support for five layers? This generates more APs then alphabet letters
-        # elif grid_layers == 5:
-        #     ap_pos = [ap_pos[i] for i in [...]]
+        elif grid_layers == 5:
+            ap_pos = [ap_pos[i] for i in [4, 6, 8, 11, 13, 15, 17, 28, 30, 32, 34, 36, 38, 40, 42, 44, 55, 57, 59]]
         else:
             print("grid_layer value not supported")
 
