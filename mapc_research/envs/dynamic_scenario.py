@@ -101,7 +101,7 @@ class DynamicScenario(Scenario):
             path_loss_fn=path_loss_fn,
             channel_width=self.scenario_first.channel_width
         ))
-        self.normalize_reward_first = DATA_RATES[self.scenario_first.channel_width,][-1]
+        self.normalize_reward_first = DATA_RATES[self.scenario_first.channel_width][-1]
 
         if pos_sec is None:
             pos_sec = pos.copy()
