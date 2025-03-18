@@ -89,7 +89,7 @@ def run_mab(scenario: StaticScenario, n_reps: int, n_steps: int, seed: int) -> l
         tx_power=scenario.tx_power,
         sigma=DEFAULT_SIGMA,
         walls=scenario.walls,
-        return_sample=True
+        return_internals=True
     ))
 
     runs = []
@@ -102,9 +102,9 @@ def run_mab(scenario: StaticScenario, n_reps: int, n_steps: int, seed: int) -> l
             key, scenario_key = jax.random.split(key)
             tx, _ = agent.sample()
 
-            reward, frames_transmitted = data_rate_fn(scenario_key, tx)
-            data_rate = np.array(frames_transmitted) * FRAMES_TO_RATE
-            agent.update([reward])
+            reward, internal = data_rate_fn(scenario_key, tx)
+            data_rate = np.array(internal.average_data_rate)
+            agent.update(reward)
 
             for ap, sta in zip(*np.where(tx)):
                 data_rate[sta] = data_rate[ap]
