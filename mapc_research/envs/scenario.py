@@ -216,7 +216,7 @@ class Scenario(ABC):
 
         return np.all(signal_power > self.CCA_THRESHOLD)
 
-    def tx_to_action(self, tx_matrix: Array, tx_power: Array) -> dict:
+    def tx_to_action(self, tx_matrix: Array, tx_power: Array, mcs: Array = None) -> dict:
         """
         Converts a transmission matrix to a list of transmissions. Assumes downlink.
 

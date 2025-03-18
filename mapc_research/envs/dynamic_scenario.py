@@ -5,7 +5,7 @@ import jax
 import jax.numpy as jnp
 from chex import Array, Scalar, PRNGKey
 from mapc_sim.constants import DEFAULT_TX_POWER, DEFAULT_SIGMA, DATA_RATES, TAU
-from mapc_sim.sim import network_data_rate
+from mapc_sim.sim import Internals, network_data_rate
 from mapc_sim.utils import default_path_loss
 
 from mapc_research.envs.scenario import Scenario
@@ -92,15 +92,15 @@ class DynamicScenario(Scenario):
         self.scenario_first = StaticScenario(
             pos, associations, n_steps, tx_power, sigma, walls, walls_pos, channel_width, tx_power_delta
         )
-        self.data_rate_fn_first = jax.jit(partial(
+        self.data_rate_fn_first = partial(
             network_data_rate,
             pos=pos,
             sigma=sigma,
             walls=walls,
             path_loss_fn=path_loss_fn,
             channel_width=self.scenario_first.channel_width
-        ))
-        self.normalize_reward_first = DATA_RATES[self.scenario_first.channel_width][-1]
+        )
+        self.normalize_reward_first = DATA_RATES[self.scenario_first.channel_width][-1].item()
 
         if pos_sec is None:
             pos_sec = pos.copy()
@@ -115,15 +115,15 @@ class DynamicScenario(Scenario):
         self.scenario_sec = StaticScenario(
             pos_sec, associations, n_steps, tx_power_sec, sigma_sec, walls_sec, walls_pos_sec, channel_width_sec, tx_power_delta
         )
-        self.data_rate_fn_sec = jax.jit(partial(
+        self.data_rate_fn_sec = partial(
             network_data_rate,
             pos=pos_sec,
             sigma=sigma_sec,
             walls=walls_sec,
             path_loss_fn=path_loss_fn,
             channel_width=self.scenario_sec.channel_width
-        ))
-        self.normalize_reward_sec = DATA_RATES[self.scenario_sec.channel_width][-1]
+        )
+        self.normalize_reward_sec = DATA_RATES[self.scenario_sec.channel_width][-1].item()
 
         self.data_rate_fn = self.data_rate_fn_first
         self.normalize_reward = self.normalize_reward_first
@@ -133,7 +133,14 @@ class DynamicScenario(Scenario):
         self.step = 0
         self.tx_power_delta = tx_power_delta
 
-    def __call__(self, key: PRNGKey, tx: Array, tx_power: Optional[Array] = None, mcs: Optional[Array] = None) -> tuple[Scalar, Scalar]:
+    def __call__(
+            self,
+            key: PRNGKey,
+            tx: Array,
+            tx_power: Optional[Array] = None,
+            mcs: Optional[Array] = None,
+            return_internals: bool = False
+    ) -> tuple[Scalar, Scalar, Optional[Internals]]:
         if tx_power is None:
             tx_power = jnp.zeros(self.pos.shape[0])
 
@@ -142,9 +149,16 @@ class DynamicScenario(Scenario):
 
         self.step += 1
 
-        thr = self.data_rate_fn(key, tx, mcs=mcs, tx_power=self.tx_power - self.tx_power_delta * tx_power)
+        data_rate_fn = jax.jit(self.data_rate_fn, static_argnames=('return_internals',))
+        out = data_rate_fn(key, tx, mcs=mcs, tx_power=self.tx_power - self.tx_power_delta * tx_power, return_internals=return_internals)
+
+        if return_internals:
+            thr, *internals = out
+        else:
+            thr, internals = out, tuple()
+
         reward = thr / self.normalize_reward
-        return thr, reward
+        return thr, reward, *internals
 
     def split_scenario(self) -> list[tuple[StaticScenario, float]]:
         is_first = True
