@@ -31,6 +31,8 @@ class StaticScenario(Scenario):
         Matrix counting the walls between each pair of nodes.
     walls_pos: Optional[Array]
         Two dimensional array of wall positions. Each row corresponds to X and Y coordinates of a wall.
+    channel_width: int
+        Channel width in MHz.
     tx_power_delta: Scalar
         Difference in transmission power between the tx power levels.
     path_loss_fn: Callable
@@ -51,12 +53,13 @@ class StaticScenario(Scenario):
             sigma: Scalar = DEFAULT_SIGMA,
             walls: Optional[Array] = None,
             walls_pos: Optional[Array] = None,
+            channel_width: int = None,
             tx_power_delta: Scalar = 3.0,
             path_loss_fn: Callable = default_path_loss,
             str_repr: str = ""
     ) -> None:
         self.str_repr = "static_" + str_repr if str_repr else "static"
-        super().__init__(associations, pos, walls, walls_pos, path_loss_fn, self.str_repr)
+        super().__init__(associations, pos, walls, walls_pos, channel_width, path_loss_fn, self.str_repr)
 
         self.pos = pos
         self.tx_power = jnp.full(pos.shape[0], default_tx_power)
@@ -70,9 +73,10 @@ class StaticScenario(Scenario):
             mcs=None,
             sigma=self.sigma,
             walls=self.walls,
-            path_loss_fn=self.path_loss_fn
+            path_loss_fn=self.path_loss_fn,
+            channel_width=self.channel_width
         ))
-        self.normalize_reward = DATA_RATES[-1]
+        self.normalize_reward = DATA_RATES[self.channel_width][-1]
 
     def __call__(self, key: PRNGKey, tx: Array, tx_power: Optional[Array] = None) -> tuple[Scalar, Scalar]:
         if tx_power is None:

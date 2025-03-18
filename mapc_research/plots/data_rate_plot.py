@@ -16,7 +16,7 @@ def plot(scenario_results: dict, scenario_config: dict, aggregate_steps: int) ->
     xs = np.linspace(0, scenario['scenario']['n_steps'], n_points) * TAU
 
     if 'mcs' in scenario_config['params']:
-        plt.axhline(DATA_RATES[scenario_config['params']['mcs']], linestyle='--', color='gray', label='Single TX')
+        plt.axhline(DATA_RATES[20][scenario_config['params']['mcs']], linestyle='--', color='gray', label='Single TX')
 
     for c, (name, data) in zip(colors, scenario_results.items()):
         for run, hierarchical in data:
