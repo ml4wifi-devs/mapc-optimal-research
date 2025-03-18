@@ -95,7 +95,6 @@ class DynamicScenario(Scenario):
         self.data_rate_fn_first = jax.jit(partial(
             network_data_rate,
             pos=pos,
-            mcs=None,
             sigma=sigma,
             walls=walls,
             path_loss_fn=path_loss_fn,
@@ -119,7 +118,6 @@ class DynamicScenario(Scenario):
         self.data_rate_fn_sec = jax.jit(partial(
             network_data_rate,
             pos=pos_sec,
-            mcs=None,
             sigma=sigma_sec,
             walls=walls_sec,
             path_loss_fn=path_loss_fn,
@@ -135,7 +133,7 @@ class DynamicScenario(Scenario):
         self.step = 0
         self.tx_power_delta = tx_power_delta
 
-    def __call__(self, key: PRNGKey, tx: Array, tx_power: Array) -> tuple[Scalar, Scalar]:
+    def __call__(self, key: PRNGKey, tx: Array, tx_power: Optional[Array] = None, mcs: Optional[Array] = None) -> tuple[Scalar, Scalar]:
         if tx_power is None:
             tx_power = jnp.zeros(self.pos.shape[0])
 
@@ -144,7 +142,7 @@ class DynamicScenario(Scenario):
 
         self.step += 1
 
-        thr = self.data_rate_fn(key, tx, tx_power=self.tx_power - self.tx_power_delta * tx_power)
+        thr = self.data_rate_fn(key, tx, mcs=mcs, tx_power=self.tx_power - self.tx_power_delta * tx_power)
         reward = thr / self.normalize_reward
         return thr, reward
 

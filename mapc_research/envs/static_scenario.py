@@ -70,7 +70,6 @@ class StaticScenario(Scenario):
         self.data_rate_fn = jax.jit(partial(
             network_data_rate,
             pos=self.pos,
-            mcs=None,
             sigma=self.sigma,
             walls=self.walls,
             path_loss_fn=self.path_loss_fn,
@@ -78,11 +77,11 @@ class StaticScenario(Scenario):
         ))
         self.normalize_reward = DATA_RATES[self.channel_width][-1]
 
-    def __call__(self, key: PRNGKey, tx: Array, tx_power: Optional[Array] = None) -> tuple[Scalar, Scalar]:
+    def __call__(self, key: PRNGKey, tx: Array, tx_power: Optional[Array] = None, mcs: Optional[Array] = None) -> tuple[Scalar, Scalar]:
         if tx_power is None:
             tx_power = jnp.zeros_like(self.tx_power)
 
-        thr = self.data_rate_fn(key, tx, tx_power=self.tx_power - self.tx_power_delta * tx_power)
+        thr = self.data_rate_fn(key, tx, mcs=mcs, tx_power=self.tx_power - self.tx_power_delta * tx_power)
         reward = thr / self.normalize_reward
         return thr, reward
 

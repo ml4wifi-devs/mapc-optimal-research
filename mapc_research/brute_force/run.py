@@ -34,7 +34,8 @@ def run_brute_force(scenario: StaticScenario, delta_tx_power: float = 2.0, tx_po
         pos=scenario.pos,
         mcs=None,
         sigma=0.0,
-        walls=scenario.walls
+        walls=scenario.walls,
+        channel_width=scenario.channel_width
     ))
     best_val, best_conf = 0, None
 
