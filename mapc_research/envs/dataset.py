@@ -7,12 +7,11 @@ import jax
 import lz4.frame
 import pulp as plp
 from chex import Array
-from mapc_optimal import Solver, positions_to_path_loss
-from mapc_optimal.constants import DATA_RATES, MAX_TX_POWER
+from mapc_optimal import OptimizationType, Solver, positions_to_path_loss
+from mapc_optimal.constants import MAX_TX_POWER
 from tqdm import tqdm
 
 from mapc_research.envs.scenario_impl import *
-from mapc_research.envs.scenario_impl import hidden_station_scenario, flow_in_the_middle_scenario
 
 
 SCENARIOS = [  # Note! The values are drawn from the interval [a, b) - a is inclusive, b is exclusive!
@@ -69,7 +68,6 @@ SCENARIOS = [  # Note! The values are drawn from the interval [a, b) - a is incl
 N_TX_POWER_LEVELS = 4
 TX_POWER_DELTA = 3.0
 TX_POWER_LEVELS = jnp.array([MAX_TX_POWER - i * TX_POWER_DELTA for i in range(N_TX_POWER_LEVELS - 1, -1, -1)])
-DATA_RATES = jnp.array(DATA_RATES)
 
 
 @dataclass
@@ -133,19 +131,19 @@ def draw_scenarios(n_realizations, key, scenarios):
         yield from draw_realizations(subkey, scenario, param_ranges)
 
 
-def rate_to_mcs(rate):
-    return (jnp.abs(DATA_RATES - rate)).argmin().item()
+def rate_to_mcs(mcs_data_rates, rate):
+    return (jnp.abs(mcs_data_rates - rate)).argmin().item()
 
 
 def tx_power_to_lvl(tx_power):
     return (jnp.abs(TX_POWER_LEVELS - tx_power)).argmin().item()
 
 
-def peek_configuration(configurations, conf_idx):
+def peek_configuration(configurations, mcs_data_rates, conf_idx):
     tx_pairs = [tx for tx in configurations['links'][conf_idx]]
     ap = [int(ap.split('_')[1]) for ap, sta in tx_pairs]
     sta = [int(sta.split('_')[1]) for ap, sta in tx_pairs]
-    mcs = [rate_to_mcs(configurations['link_rates'][conf_idx][tx]) for tx in tx_pairs]
+    mcs = [rate_to_mcs(mcs_data_rates, configurations['link_rates'][conf_idx][tx]) for tx in tx_pairs]
     tx_power = [tx_power_to_lvl(configurations['tx_power'][conf_idx][tx]) for tx in tx_pairs]
     return Configuration([TxPair(ap, sta, mcs[i], tx_power[i]) for i, (ap, sta) in enumerate(zip(ap, sta))])
 
@@ -156,7 +154,7 @@ def draw_configuration(n_configurations, key, dataset_item):
     stations = list(chain.from_iterable(associations.values()))
     path_loss = positions_to_path_loss(dataset_item.pos, dataset_item.walls)
 
-    solver = Solver(stations, access_points, opt_sum=True, solver=plp.CPLEX_CMD(msg=False))
+    solver = Solver(stations, access_points, opt_type=OptimizationType.SUM, solver=plp.CPLEX_CMD(msg=False))
     configurations, _ = solver(path_loss, associations)
 
     shares = jnp.array(list(configurations['shares'].values()))
