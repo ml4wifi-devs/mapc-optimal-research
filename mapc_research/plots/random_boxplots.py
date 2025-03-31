@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from mapc_research.plots.config import get_cmap
-
 
 if __name__ == "__main__":
     random_scenario_idx = 18
@@ -16,6 +14,11 @@ if __name__ == "__main__":
         dcf_results = json.load(f)[random_scenario_idx:]
         dcf_results = chain.from_iterable(dcf_results)
         dcf_results = np.asarray(list(dcf_results))
+
+    with open('../mab/mean_sr_results.json') as f:
+        sr_results = json.load(f)[random_scenario_idx:]
+        sr_results = chain.from_iterable(sr_results)
+        sr_results = np.asarray(list(sr_results)) / dcf_results * 100
 
     with open('../mab/mean_mab_h_results.json') as f:
         mab_h_results = json.load(f)[random_scenario_idx:]
@@ -27,7 +30,7 @@ if __name__ == "__main__":
         mab_f_results = chain.from_iterable(mab_f_results)
         mab_f_results = np.asarray(list(mab_f_results)) / dcf_results * 100
 
-    with open('../mab/mean_optimal_results.json') as f:
+    with open('../upper_bound/all_results.json') as f:
         optimal_results = json.load(f)[random_scenario_idx:]
         t_optimal_results = [o[0]['runs'] for o in optimal_results]
         t_optimal_results = chain.from_iterable(t_optimal_results)
@@ -35,11 +38,6 @@ if __name__ == "__main__":
         f_optimal_results = [o[1]['runs'] for o in optimal_results]
         f_optimal_results = chain.from_iterable(f_optimal_results)
         f_optimal_results = np.asarray(list(f_optimal_results)) / dcf_results * 100
-
-    with open('../mab/mean_sr_results.json') as f:
-        sr_results = json.load(f)[random_scenario_idx:]
-        sr_results = chain.from_iterable(sr_results)
-        sr_results = np.asarray(list(sr_results)) / dcf_results * 100
 
     df = pd.DataFrame(
         np.stack([t_optimal_results, f_optimal_results, mab_h_results, mab_f_results, sr_results], axis=1),

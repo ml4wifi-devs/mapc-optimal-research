@@ -3,7 +3,6 @@ from itertools import product
 import jax
 import jax.numpy as jnp
 from chex import Array, PRNGKey, Scalar
-from mapc_sim.utils import enterprise_tgax_path_loss, residential_tgax_path_loss
 
 from mapc_research.envs.scenario import Scenario
 from mapc_research.envs.static_scenario import StaticScenario
@@ -238,6 +237,9 @@ def residential_scenario(
     BREAKING_POINT = 5
     WALL_LOSS = 5
 
+    to apply the required path loss model, set the `path_loss_fn` parameter of the `StaticScenario`
+    to `path_loss_fn=mapc_sim.utils.residential_tgax_path_loss`
+
     Suggested parameter ranges:
 
     x_apartments: 2..10
@@ -280,7 +282,6 @@ def residential_scenario(
         n_steps=n_steps,
         walls=walls,
         walls_pos=jnp.array(walls_pos),
-        path_loss_fn=residential_tgax_path_loss,
         str_repr=str_repr
     )
 
@@ -511,7 +512,6 @@ def enterprise_scenario(
         n_steps=n_steps,
         walls=walls,
         walls_pos=jnp.array(walls_pos),
-        path_loss_fn=enterprise_tgax_path_loss,
         str_repr=str_repr
     )
 
@@ -627,6 +627,5 @@ def indoor_small_bsss_scenario(
         associations,
         n_steps=n_steps,
         walls=walls,
-        path_loss_fn=enterprise_tgax_path_loss,
         str_repr=str_repr
     )
