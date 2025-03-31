@@ -15,7 +15,7 @@ from mapc_research.plots.config import AGENT_COLORS
 
 
 N_RUNS = 10
-N_STEPS = 2400
+N_STEPS = 600
 SIM_TIME = N_STEPS * TAU
 
 
@@ -30,10 +30,10 @@ if __name__ == '__main__':
     with open('../mab/node_thr_f_mab.json') as f:
         mab_f = json.load(f)
 
-    with open('../mab/upper_bound.json') as f:
+    with open('../upper_bound/all_results.json') as f:
         optimal = json.load(f)
 
-    dcf = pd.read_csv('oracle/residential/static_residential_104_2_3_4_20.0.csv')
+    dcf = pd.read_csv('dcf/residential/static_residential_104_2_3_4_20.0.csv')
     sr = pd.read_csv('sr/residential/static_residential_104_2_3_4_20.0.csv')
 
     dcf_thr = np.asarray(dcf.groupby("Dst")["AMPDUSize"].sum() * 1e-6 / SIM_TIME / N_RUNS)

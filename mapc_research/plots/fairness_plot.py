@@ -1,9 +1,12 @@
 import json
+from collections import defaultdict
+from itertools import chain
 
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
-# from mapc_research.envs.test_scenarios import RESIDENTIAL_SCENARIOS
+from mapc_research.envs.test_scenarios import INDOOR_SCENARIOS
 from mapc_research.plots.config import AGENT_COLORS
 
 DISTANCE_MAP = {
@@ -46,7 +49,7 @@ def plot_for_distance(distance, fairness_index):
     ax.grid(axis='y', linewidth=0.5)
 
     plt.tight_layout()
-    plt.savefig('fairness_residential_d20.pdf', bbox_inches='tight')
+    plt.savefig(f'fairness_residential_d{d}.pdf', bbox_inches='tight')
     plt.show()
     plt.clf()
 
@@ -58,46 +61,44 @@ def jains_fairness_index(data_rate):
 
 
 if __name__ == '__main__':
-    # with open('../mab/node_thr_h_mab.json') as f:
-    #     mab_h = json.load(f)
-    #
-    # with open('../mab/node_thr_f_mab.json') as f:
-    #     mab_f = json.load(f)
-    #
-    # with open('../mab/upper_bound.json') as f:
-    #     optimal = json.load(f)
-    #
-    # all_results = []
-    #
-    # for i, scenario in tqdm(enumerate(RESIDENTIAL_SCENARIOS)):
-    #     stas = np.asarray(list(chain.from_iterable(scenario.associations.values())))
-    #
-    #     mab_h_thr = np.asarray(mab_h[i]).mean(axis=(0, 1))[stas]
-    #     mab_f_thr = np.asarray(mab_f[i]).mean(axis=(0, 1))[stas] if len(mab_f[i]) > 0 else np.asarray([])
-    #     t_optimal_thr = defaultdict(float)
-    #     f_optimal_thr = defaultdict(float)
-    #
-    #     for conf, weight in optimal[i][0]['shares'][0].items():
-    #         for link, rate in optimal[i][0]['link_rates'][0][conf].items():
-    #             t_optimal_thr[link] += rate * weight
-    #     t_optimal_thr = np.asarray(list(t_optimal_thr.values()))
-    #
-    #     for conf, weight in optimal[i][1]['shares'][0].items():
-    #         for link, rate in optimal[i][1]['link_rates'][0][conf].items():
-    #             f_optimal_thr[link] += rate * weight
-    #     f_optimal_thr = np.asarray(list(f_optimal_thr.values()))
-    #
-    #     all_results.append({
-    #         'MAB': jains_fairness_index(mab_f_thr),
-    #         'H-MAB': jains_fairness_index(mab_h_thr),
-    #         'T-Optimal': jains_fairness_index(t_optimal_thr),
-    #         'F-Optimal': jains_fairness_index(f_optimal_thr),
-    #     })
-    #
-    # with open('fairness_index.json', 'w') as f:
-    #     json.dump(all_results, f)
+    with open('../mab/node_thr_h_mab.json') as f:
+        mab_h = json.load(f)
 
-    with open('fairness_index.json') as f:
-        all_results = json.load(f)
+    with open('../mab/node_thr_f_mab.json') as f:
+        mab_f = json.load(f)
 
-    plot_for_distance(20, all_results)
+    with open('../upper_bound/all_results.json') as f:
+        optimal = json.load(f)
+
+    all_results = []
+
+    for i, scenario in tqdm(enumerate(INDOOR_SCENARIOS)):
+        stas = np.asarray(list(chain.from_iterable(scenario.associations.values())))
+
+        mab_h_thr = np.asarray(mab_h[i]).mean(axis=(0, 1))[stas]
+        mab_f_thr = np.asarray(mab_f[i]).mean(axis=(0, 1))[stas] if len(mab_f[i]) > 0 else np.asarray([])
+        t_optimal_thr = defaultdict(float)
+        f_optimal_thr = defaultdict(float)
+
+        for conf, weight in optimal[i][0]['shares'][0].items():
+            for link, rate in optimal[i][0]['link_rates'][0][conf].items():
+                t_optimal_thr[link] += rate * weight
+        t_optimal_thr = np.asarray(list(t_optimal_thr.values()))
+
+        for conf, weight in optimal[i][1]['shares'][0].items():
+            for link, rate in optimal[i][1]['link_rates'][0][conf].items():
+                f_optimal_thr[link] += rate * weight
+        f_optimal_thr = np.asarray(list(f_optimal_thr.values()))
+
+        all_results.append({
+            'MAB': jains_fairness_index(mab_f_thr),
+            'H-MAB': jains_fairness_index(mab_h_thr),
+            'T-Optimal': jains_fairness_index(t_optimal_thr),
+            'F-Optimal': jains_fairness_index(f_optimal_thr),
+        })
+
+    with open('fairness_index.json', 'w') as f:
+        json.dump(all_results, f)
+
+    for d in DISTANCE_MAP.keys():
+        plot_for_distance(d, all_results)

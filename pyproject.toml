@@ -22,21 +22,19 @@ authors = [
   {name = "Szymon Szott", email = "szymon.szott@agh.edu.pl"},
 ]
 
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 dependencies = [
-  "chex~=0.1.86",
-  "jax~=0.4.30",
-  "jaxlib~=0.4.30",
+  "jax-ai-stack~=2025.1.9",
   "joblib~=1.4.2",
-  "mapc-dcf~=0.2.0",
+  "mapc-dcf~=0.2.2",
   "mapc_mab@git+https://github.com/ml4wifi-devs/mapc-mab",
-  "mapc-optimal~=0.1.1",
-  "mapc-sim~=0.1.7",
-  "matplotlib~=3.9.3",
+  "mapc-optimal~=0.2.0",
+  "mapc-sim~=0.2.1",
+  "matplotlib~=3.9.4",
   "optuna~=3.6.1",
   "seaborn~=0.13.2",
   "statsmodels~=0.14.4",
-  "scikit-learn~=1.6.0",
+  "scikit-learn~=1.6.1",
   "tqdm~=4.67.1"
 ]
 
