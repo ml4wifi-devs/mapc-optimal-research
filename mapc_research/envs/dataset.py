@@ -8,7 +8,7 @@ import lz4.frame
 import pulp as plp
 from chex import Array
 from mapc_optimal import OptimizationType, Solver, positions_to_path_loss
-from mapc_optimal.constants import MAX_TX_POWER
+from mapc_optimal.constants import MAX_TX_POWER, DATA_RATES
 from tqdm import tqdm
 
 from mapc_research.envs.scenario_impl import *
@@ -154,7 +154,7 @@ def draw_configuration(n_configurations, key, dataset_item):
     stations = list(chain.from_iterable(associations.values()))
     path_loss = positions_to_path_loss(dataset_item.pos, dataset_item.walls)
 
-    solver = Solver(stations, access_points, opt_type=OptimizationType.SUM, solver=plp.CPLEX_CMD(msg=False))
+    solver = Solver(stations, access_points, opt_type=OptimizationType.MAX_MIN, solver=plp.CPLEX_CMD(msg=False))
     configurations, _ = solver(path_loss, associations)
 
     shares = jnp.array(list(configurations['shares'].values()))
@@ -163,7 +163,7 @@ def draw_configuration(n_configurations, key, dataset_item):
     for _ in range(n_configurations):
         key, subkey = jax.random.split(key)
         idx = jax.random.choice(subkey, len(shares), p=shares).item()
-        yield peek_configuration(configurations, idx_to_conf[idx])
+        yield peek_configuration(configurations, DATA_RATES[20], idx_to_conf[idx])
 
 
 def draw_history(n_configurations, key, dataset):
