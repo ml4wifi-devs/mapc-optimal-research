@@ -652,8 +652,8 @@ def symm_enterprise_scenario(
         y_apartments: int = 2,
         n_sta_per_ap: int = 4,
         size: Scalar = 10,
-        d: int = 5, #distance from AP
-        sta_positioning: int = 0, # 0 means ring, 1 means circle
+        d: int = 5, # distance from AP
+        sta_positioning: int = 0, # 0 means sta placement on ring, 1 means sta placement in a circle
         mcs: int = 11
 ) -> StaticScenario:
     key = jax.random.PRNGKey(seed)
