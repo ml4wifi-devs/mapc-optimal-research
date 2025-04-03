@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 from itertools import chain
 
 import pulp as plp
-from mapc_optimal import Solver, positions_to_path_loss
+from mapc_optimal import OptimizationType, Solver, positions_to_path_loss
 from tqdm import tqdm
 
 from mapc_research.envs.static_scenario import StaticScenario
@@ -26,7 +26,7 @@ def convert_to_string(data: list) -> str:
     return new_data
 
 
-def run_solver(scenario: StaticScenario, solver_kwargs: dict) -> tuple:
+def run_solver(scenario: StaticScenario, opt_type: OptimizationType, baseline: dict) -> tuple:
     associations = scenario.get_associations()
     access_points = list(associations.keys())
     stations = list(chain.from_iterable(associations.values()))
@@ -35,27 +35,34 @@ def run_solver(scenario: StaticScenario, solver_kwargs: dict) -> tuple:
     walls = scenario.walls
     path_loss = positions_to_path_loss(positions, walls)
 
-    solver = Solver(stations, access_points, **solver_kwargs, solver=plp.CPLEX_CMD(msg=False))
-    return solver(path_loss, associations)
+    solver = Solver(stations, access_points, opt_type=opt_type, solver=plp.CPLEX_CMD(msg=False, threads=None))
+    return solver(path_loss, associations, baseline, return_objectives=True)
 
 
 if __name__ == '__main__':
     args = ArgumentParser()
+    args.add_argument('-b', '--baseline', type=str, default='dcf_baselines.json')
     args.add_argument('-o', '--output', type=str, default='all_results.json')
     args = args.parse_args()
 
+    with open(args.baseline, 'r') as file:
+        baselines = json.load(file)
+
     all_results = []
 
-    for scenario in tqdm(ALL_SCENARIOS, desc='Scenarios'):
+    for scenario, scenario_baseline in tqdm(zip(ALL_SCENARIOS, baselines), total=len(ALL_SCENARIOS), desc='Scenarios'):
         scenario_results = []
 
-        for opt_sum, opt_name in zip([True, False], ['opt_sum', 'opt_min']):
+        for opt_type, opt_name in zip(
+                [OptimizationType.SUM, OptimizationType.MAX_MIN, OptimizationType.MAX_MIN_BASELINE, OptimizationType.PROPORTIONAL],
+                ['sum', 'max_min', 'max_min_baseline', 'proportional']
+        ):
             split_rate = []
             split_shares = []
             split_links_rates = []
 
-            for static, _ in scenario.split_scenario():
-                configuration, solver_rate = run_solver(static, {'opt_sum': opt_sum})
+            for (static, _), baseline in zip(scenario.split_scenario(), scenario_baseline):
+                configuration, solver_rate, obj = run_solver(static, opt_type, baseline)
                 split_rate.append(solver_rate)
                 split_shares.append(configuration["shares"])
                 split_links_rates.append(configuration["link_rates"])

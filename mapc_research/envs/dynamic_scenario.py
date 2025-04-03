@@ -5,7 +5,7 @@ import jax
 import jax.numpy as jnp
 from chex import Array, Scalar, PRNGKey
 from mapc_sim.constants import DEFAULT_TX_POWER, DEFAULT_SIGMA, DATA_RATES, TAU
-from mapc_sim.sim import network_data_rate
+from mapc_sim.sim import Internals, network_data_rate
 from mapc_sim.utils import default_path_loss
 
 from mapc_research.envs.scenario import Scenario
@@ -20,8 +20,6 @@ class DynamicScenario(Scenario):
     ----------
     pos: Array
         Two dimensional array of node positions. Each row corresponds to X and Y coordinates of a node.
-    mcs: int
-        Modulation and coding scheme of the nodes. Each entry corresponds to a node.
     associations: dict
         Dictionary of associations between access points and stations.
     n_steps: int
@@ -34,10 +32,10 @@ class DynamicScenario(Scenario):
         Adjacency matrix of walls. Each entry corresponds to a node.
     walls_pos: Optional[Array]
         Two dimensional array of wall positions. Each row corresponds to X and Y coordinates of a wall.
+    channel_width: int
+        Channel width in MHz.
     pos_sec: Optional[Array]
         Array of node positions after the change.
-    mcs_sec: Optional[int]
-        Modulation and coding scheme of the nodes after the change.
     tx_power_sec: Optional[Scalar]
         Default transmission power of the nodes after the change.
     sigma_sec: Optional[Scalar]
@@ -46,6 +44,10 @@ class DynamicScenario(Scenario):
         Adjacency matrix of walls after the change.
     walls_pos_sec: Optional[Array]
         Array of wall positions after the change.
+    channel_width_sec: int
+        Channel width after the change.
+    switch_steps: Optional[list]
+        List of steps at which the scenario should change.
     tx_power_delta: Scalar
         Difference in transmission power between the tx power levels.
     path_loss_fn: Callable
@@ -60,49 +62,48 @@ class DynamicScenario(Scenario):
     def __init__(
             self,
             pos: Array,
-            mcs: int,
             associations: dict,
             n_steps: int,
             tx_power: Scalar = DEFAULT_TX_POWER,
             sigma: Scalar = DEFAULT_SIGMA,
             walls: Optional[Array] = None,
             walls_pos: Optional[Array] = None,
+            channel_width: int = None,
             pos_sec: Optional[Array] = None,
-            mcs_sec: Optional[int] = None,
             tx_power_sec: Optional[Scalar] = None,
             sigma_sec: Optional[Scalar] = None,
             walls_sec: Optional[Array] = None,
             walls_pos_sec: Optional[Array] = None,
+            channel_width_sec: int = None,
             switch_steps: Optional[list] = None,
             tx_power_delta: Scalar = 3.0,
             path_loss_fn: Callable = default_path_loss,
             str_repr: str = ""
     ) -> None:
         self.str_repr = "dynamic_" + str_repr if str_repr else "dynamic"
-        super().__init__(associations, pos, walls, walls_pos, path_loss_fn, self.str_repr)
+        super().__init__(associations, pos, walls, walls_pos, channel_width, path_loss_fn, self.str_repr)
 
         if walls is None:
             walls = jnp.zeros((pos.shape[0], pos.shape[0]))
         if switch_steps is None:
             switch_steps = []
 
-        self.data_rate_fn_first = jax.jit(partial(
+        self.tx_power_first = jnp.full(pos.shape[0], tx_power)
+        self.scenario_first = StaticScenario(
+            pos, associations, n_steps, tx_power, sigma, walls, walls_pos, channel_width, tx_power_delta
+        )
+        self.data_rate_fn_first = partial(
             network_data_rate,
             pos=pos,
-            mcs=None,
             sigma=sigma,
             walls=walls,
-            path_loss_fn=path_loss_fn
-        ))
-        self.normalize_reward_first = DATA_RATES[-1]
-        self.tx_power_first = jnp.full(pos.shape[0], tx_power)
-        self.mcs_first = mcs
-        self.scenario_first = StaticScenario(pos, mcs, associations, n_steps, tx_power, sigma, walls, walls_pos, tx_power_delta)
+            path_loss_fn=path_loss_fn,
+            channel_width=self.scenario_first.channel_width
+        )
+        self.normalize_reward_first = DATA_RATES[self.scenario_first.channel_width][-1].item()
 
         if pos_sec is None:
             pos_sec = pos.copy()
-        if mcs_sec is None:
-            mcs_sec = mcs
         if tx_power_sec is None:
             tx_power_sec = tx_power
         if sigma_sec is None:
@@ -110,29 +111,36 @@ class DynamicScenario(Scenario):
         if walls_sec is None:
             walls_sec = walls.copy()
 
-        self.data_rate_fn_sec = jax.jit(partial(
+        self.tx_power_sec = jnp.full(pos_sec.shape[0], tx_power_sec)
+        self.scenario_sec = StaticScenario(
+            pos_sec, associations, n_steps, tx_power_sec, sigma_sec, walls_sec, walls_pos_sec, channel_width_sec, tx_power_delta
+        )
+        self.data_rate_fn_sec = partial(
             network_data_rate,
             pos=pos_sec,
-            mcs=None,
             sigma=sigma_sec,
             walls=walls_sec,
-            path_loss_fn=path_loss_fn
-        ))
-        self.normalize_reward_sec = DATA_RATES[-1]
-        self.tx_power_sec = jnp.full(pos_sec.shape[0], tx_power_sec)
-        self.mcs_sec = mcs_sec
-        self.scenario_sec = StaticScenario(pos_sec, mcs_sec, associations, n_steps, tx_power_sec, sigma_sec, walls_sec, walls_pos_sec, tx_power_delta)
+            path_loss_fn=path_loss_fn,
+            channel_width=self.scenario_sec.channel_width
+        )
+        self.normalize_reward_sec = DATA_RATES[self.scenario_sec.channel_width][-1].item()
 
         self.data_rate_fn = self.data_rate_fn_first
         self.normalize_reward = self.normalize_reward_first
         self.tx_power = self.tx_power_first
-        self.mcs = self.mcs_first
         self.n_steps = n_steps
         self.switch_steps = switch_steps
         self.step = 0
         self.tx_power_delta = tx_power_delta
 
-    def __call__(self, key: PRNGKey, tx: Array, tx_power: Array) -> tuple[Scalar, Scalar]:
+    def __call__(
+            self,
+            key: PRNGKey,
+            tx: Array,
+            tx_power: Optional[Array] = None,
+            mcs: Optional[Array] = None,
+            return_internals: bool = False
+    ) -> tuple[Scalar, Scalar, Optional[Internals]]:
         if tx_power is None:
             tx_power = jnp.zeros(self.pos.shape[0])
 
@@ -141,9 +149,16 @@ class DynamicScenario(Scenario):
 
         self.step += 1
 
-        thr = self.data_rate_fn(key, tx, tx_power=self.tx_power - self.tx_power_delta * tx_power)
+        data_rate_fn = jax.jit(self.data_rate_fn, static_argnames=('return_internals',))
+        out = data_rate_fn(key, tx, mcs=mcs, tx_power=self.tx_power - self.tx_power_delta * tx_power, return_internals=return_internals)
+
+        if return_internals:
+            thr, *internals = out
+        else:
+            thr, internals = out, tuple()
+
         reward = thr / self.normalize_reward
-        return thr, reward
+        return thr, reward, *internals
 
     def split_scenario(self) -> list[tuple[StaticScenario, float]]:
         is_first = True
@@ -168,41 +183,39 @@ class DynamicScenario(Scenario):
         if self.data_rate_fn is self.data_rate_fn_first:
             self.data_rate_fn = self.data_rate_fn_sec
             self.tx_power = self.tx_power_sec
-            self.mcs = self.mcs_sec
             self.normalize_reward = self.normalize_reward_sec
         else:
             self.data_rate_fn = self.data_rate_fn_first
             self.tx_power = self.tx_power_first
-            self.mcs = self.mcs_first
             self.normalize_reward = self.normalize_reward_first
 
     @staticmethod
     def from_static_params(
             scenario: StaticScenario,
-            n_steps: int,
+            n_steps: int = float('inf'),
             pos_sec: Optional[Array] = None,
-            mcs_sec: Optional[int] = None,
             tx_power_sec: Optional[Scalar] = None,
             sigma_sec: Optional[Scalar] = None,
             walls_sec: Optional[Array] = None,
             walls_pos_sec: Optional[Array] = None,
+            channel_width_sec: int = None,
             switch_steps: Optional[list] = None
     ) -> 'DynamicScenario':
         return DynamicScenario(
             scenario.pos,
-            scenario.mcs,
             scenario.associations,
             n_steps,
             scenario.tx_power,
             scenario.sigma,
             scenario.walls,
             scenario.walls_pos,
+            scenario.channel_width,
             pos_sec,
-            mcs_sec,
             tx_power_sec,
             sigma_sec,
             walls_sec,
             walls_pos_sec,
+            channel_width_sec,
             switch_steps,
             str_repr=scenario.str_repr
         )
@@ -212,23 +225,23 @@ class DynamicScenario(Scenario):
             scenario: StaticScenario,
             scenario_sec: StaticScenario,
             switch_steps: list,
-            n_steps: int
+            n_steps: int = float('inf')
     ) -> 'DynamicScenario':
         return DynamicScenario(
             scenario.pos,
-            scenario.mcs,
             scenario.associations,
             n_steps,
             scenario.tx_power,
             scenario.sigma,
             scenario.walls,
             scenario.walls_pos,
+            scenario.channel_width,
             scenario_sec.pos,
-            scenario_sec.mcs,
             scenario_sec.tx_power,
             scenario_sec.sigma,
             scenario_sec.walls,
             scenario_sec.walls_pos,
+            scenario_sec.channel_width,
             switch_steps,
             str_repr=scenario.str_repr
         )

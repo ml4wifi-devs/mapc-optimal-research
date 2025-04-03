@@ -28,39 +28,39 @@ if __name__ == '__main__':
 
     dcf_results = []
 
-    with open('oracle/exemplary/static_residential_1_2_2_4_10.0.json') as file:
+    with open('dcf/exemplary/static_residential_100_2_2_4_10.0.json') as file:
         dcf_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('oracle/exemplary/dynamic_static_residential_2_2_2_4_20.0_a.json') as file:
+    with open('dcf/exemplary/dynamic_static_residential_101_2_2_4_20.0_a.json') as file:
         dcf_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('oracle/exemplary/dynamic_static_residential_3_2_2_4_20.0_b.json') as file:
+    with open('dcf/exemplary/dynamic_static_residential_101_2_2_4_20.0_b.json') as file:
         dcf_results[-1].append(json.load(file)['DataRate']['Mean'])
 
-    with open('oracle/exemplary/dynamic_random_3_75.0_4.0_4_4_a.json') as file:
+    with open('dcf/exemplary/dynamic_random_3_75.0_4_4.0_4_a.json') as file:
         dcf_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('oracle/exemplary/dynamic_random_3_75.0_4.0_4_4_b.json') as file:
+    with open('dcf/exemplary/dynamic_random_3_75.0_4_4.0_4_b.json') as file:
         dcf_results[-1].append(json.load(file)['DataRate']['Mean'])
 
     sr_results = []
 
-    with open('sr/exemplary/static_residential_1_2_2_4_10.0.json') as file:
+    with open('sr/exemplary/static_residential_100_2_2_4_10.0.json') as file:
         sr_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('sr/exemplary/dynamic_static_residential_2_2_2_4_20.0_a.json') as file:
+    with open('sr/exemplary/dynamic_static_residential_101_2_2_4_20.0_a.json') as file:
         sr_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('sr/exemplary/dynamic_static_residential_3_2_2_4_20.0_b.json') as file:
+    with open('sr/exemplary/dynamic_static_residential_101_2_2_4_20.0_b.json') as file:
         sr_results[-1].append(json.load(file)['DataRate']['Mean'])
 
-    with open('sr/exemplary/dynamic_random_3_75.0_4.0_4_4_a.json') as file:
+    with open('sr/exemplary/dynamic_random_3_75.0_4_4.0_4_a.json') as file:
         sr_results.append([json.load(file)['DataRate']['Mean']])
 
-    with open('sr/exemplary/dynamic_random_3_75.0_4.0_4_4_b.json') as file:
+    with open('sr/exemplary/dynamic_random_3_75.0_4_4.0_4_b.json') as file:
         sr_results[-1].append(json.load(file)['DataRate']['Mean'])
 
-    with open('../mab/mean_optimal_results.json') as file:
+    with open('../upper_bound/all_results.json') as file:
         optimal_results = json.load(file)[:3]
 
     fig, axes = plt.subplots(1, 3, sharey=True)

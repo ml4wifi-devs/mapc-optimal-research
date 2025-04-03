@@ -1,11 +1,10 @@
+import os
+os.environ['JAX_ENABLE_X64'] = 'True'
+
 import json
 import logging
-import os
 from time import time
-from typing import Dict
 from argparse import ArgumentParser
-
-os.environ['JAX_ENABLE_X64'] = 'True'
 
 import simpy
 import jax
@@ -26,18 +25,16 @@ def single_run(
         spatial_reuse: bool,
         logger: Logger
 ) -> None:
-    
     key, key_channel = jax.random.split(key)
     des_env = simpy.Environment()
     channel = Channel(key_channel, spatial_reuse, scenario.pos, walls=scenario.walls)
-    aps: Dict[int, AccessPoint] = {}
-    for ap in scenario.associations:
+    aps: dict[int, AccessPoint] = {}
 
+    for ap in scenario.associations:
         key, key_ap = jax.random.split(key)
         clients = jnp.array(scenario.associations[ap])
         tx_power = scenario.tx_power[ap].item()
-        mcs = scenario.mcs
-        aps[ap] = AccessPoint(key_ap, ap, scenario.pos, tx_power, mcs, clients, channel, des_env, logger)
+        aps[ap] = AccessPoint(key_ap, ap, scenario.pos, tx_power, None, clients, channel, des_env, logger)
         aps[ap].start_operation(run)
     
     des_env.run(until=warmup_length + simulation_length)
@@ -46,14 +43,15 @@ def single_run(
     # TODO to be removed once debugged or improve logger
     total = 0
     collisions = 0
+
     for ap in aps.keys():
         total_ap = aps[ap].dcf.total_attempts
         collisions_ap = aps[ap].dcf.total_collisions
         logging.warning(f"Run{run}:Collisions:AP{ap}: {collisions_ap / total_ap:.3f} (of {total_ap})")
         total += total_ap
         collisions += collisions_ap
-    logging.warning(f"Run{run}:Collisions: {collisions / total:.3f} (of {total})")
 
+    logging.warning(f"Run{run}:Collisions: {collisions / total:.3f} (of {total})")
     del des_env
 
 
@@ -77,6 +75,7 @@ if __name__ == '__main__':
 
     scenario = globals()[config['scenario']](**config['scenario_params'])
     scenario, sim_time = scenario.split_scenario()[config["scenario_index"]]
+
     if args.plot:
         scenario.plot(f"{args.results_path}_topo.pdf")
 

@@ -27,6 +27,8 @@ class Scenario(ABC):
     walls_pos: Optional[Array]
         Two dimensional array of wall positions. Each row corresponds to the X and Y coordinates of
         the wall start and end points.
+    channel_width: int
+        Channel width in MHz.
     path_loss_fn: Callable
         A function that calculates the path loss between two nodes. The function signature should be
         `path_loss_fn(distance: Array, walls: Array) -> Array`, where `distance` is the matrix of distances
@@ -42,16 +44,18 @@ class Scenario(ABC):
             pos: Array,
             walls: Optional[Array] = None,
             walls_pos: Optional[Array] = None,
-            fontsize: int=1,
+            channel_width: int = None,
             path_loss_fn: Callable = default_path_loss,
             str_repr: str = ""
     ) -> None:
         self.CCA_THRESHOLD = -82.0  # IEEE Std 802.11-2020 (Revision of IEEE Std 802.11-2016), 17.3.10.6: CCA requirements
+        self.DEFAULT_CHANNEL_WIDTH = 20
 
         self.associations = associations
         self.pos = pos
         self.walls_pos = walls_pos if walls_pos is not None else []
         self.walls = walls if walls is not None else self._calculate_walls_matrix()
+        self.channel_width = channel_width if channel_width is not None else self.DEFAULT_CHANNEL_WIDTH
         self.path_loss_fn = path_loss_fn
 
         self.str_repr = str_repr
@@ -132,7 +136,7 @@ class Scenario(ABC):
 
         return seq
 
-    def plot(self, pos: Array, filename: str = None, label_size: int=10, show_circles: bool = True) -> None:
+    def plot(self, pos: Array, filename: str = None, label_size: int = 10, show_circles: bool = True) -> None:
         """
         Plots the current state of the scenario.
 
@@ -141,7 +145,13 @@ class Scenario(ABC):
         pos : Array
             Two dimensional array of node positions.
         filename : str
+            Filename to save the plot.
+        label_size : int
+            Size of the labels.
+        show_circles : bool
+            If True, circles are drawn around the access points indicating the position of the furthest station.
         """
+
         colors = get_cmap(len(self.associations))
         ap_labels = self._generate_letter_sequence(len(self.associations))
 
@@ -150,10 +160,10 @@ class Scenario(ABC):
         for i, (ap, stations) in enumerate(self.associations.items()):
             ax.scatter(pos[ap, 0], pos[ap, 1], marker='x', color=colors[i])
             ax.scatter(pos[stations, 0], pos[stations, 1], marker='.', color=colors[i])
-            ax.annotate(f'AP {ap_labels[i]}', (pos[ap, 0], pos[ap, 1] + 2), color=colors[i], va='bottom', ha='center', size = label_size)
+            ax.annotate(f'AP {ap_labels[i]}', (pos[ap, 0], pos[ap, 1] + 2), color=colors[i], va='bottom', ha='center', size=label_size)
 
-            radius = np.max(np.sqrt(np.sum((pos[stations, :] - pos[ap, :]) ** 2, axis=-1)))
             if show_circles:
+                radius = np.max(np.sqrt(np.sum((pos[stations, :] - pos[ap, :]) ** 2, axis=-1)))
                 circle = plt.Circle((pos[ap, 0], pos[ap, 1]), radius * 1.2, fill=False, linewidth=0.5)
                 ax.add_patch(circle)
 
@@ -206,7 +216,7 @@ class Scenario(ABC):
 
         return np.all(signal_power > self.CCA_THRESHOLD)
 
-    def tx_to_action(self, tx_matrix: Array, tx_power: Array) -> dict:
+    def tx_to_action(self, tx_matrix: Array, tx_power: Array, mcs: Array = None) -> dict:
         """
         Converts a transmission matrix to a list of transmissions. Assumes downlink.
 
