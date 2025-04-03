@@ -664,8 +664,23 @@ def symm_residential_scenario(
         n_sta_per_ap: int = 4,
         size: Scalar = 10,
         d_sta: int = 5,
-        sta_positioning: int = 0  # 0 means sta placement on ring, 1 means sta placement in a circle
+        sta_positioning: int = 0
 ) -> StaticScenario:
+    """
+    Symmetrical version of the residential scenario. Set `sta_positioning` to 0 for ring placement
+    and 1 for circle placement of STAs. The APs are placed in the center of each apartment, and the STAs
+    are placed around the APs.
+
+    The path loss model of this scenario requires:
+
+    BREAKING_POINT = 5
+    WALL_LOSS = 5
+
+    to apply the required path loss model, set the `path_loss_fn` parameter of the `StaticScenario`
+    to `path_loss_fn=mapc_sim.utils.residential_tgax_path_loss`
+
+    """
+
     key = jax.random.PRNGKey(seed)
     str_repr = f"symm_residential_{seed}_{x_apartments}_{y_apartments}_{n_sta_per_ap}_{size}"
     associations, pos, walls_pos = {}, [], []
@@ -707,6 +722,5 @@ def symm_residential_scenario(
         jnp.array(pos), mcs, associations, n_steps,
         walls=walls,
         walls_pos=jnp.array(walls_pos),
-        path_loss_fn=residential_tgax_path_loss,
         str_repr=str_repr
     )
