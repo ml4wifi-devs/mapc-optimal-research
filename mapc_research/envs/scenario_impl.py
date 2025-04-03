@@ -719,7 +719,7 @@ def symm_residential_scenario(
 
 
     return StaticScenario(
-        jnp.array(pos), mcs, associations, n_steps,
+        jnp.array(pos), associations, n_steps,
         walls=walls,
         walls_pos=jnp.array(walls_pos),
         str_repr=str_repr
