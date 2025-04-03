@@ -629,3 +629,98 @@ def indoor_small_bsss_scenario(
         walls=walls,
         str_repr=str_repr
     )
+
+
+def position_stations_in_circle(key, n_sta_per_ap, radius, ap_position):
+    pos_key, key = jax.random.split(key)
+
+    angles = jax.random.uniform(pos_key, (n_sta_per_ap,), minval=0, maxval=2 * jnp.pi)
+    radii = jax.random.uniform(key, (n_sta_per_ap,), minval=0, maxval=radius)
+
+    x_positions = ap_position[0] + radii * jnp.cos(angles)
+    y_positions = ap_position[1] + radii * jnp.sin(angles)
+
+    positions = jnp.stack((x_positions, y_positions), axis=-1)
+
+    return positions.tolist()
+
+
+def position_stations_on_ring(key, n_sta_per_ap, radius, ap_position):
+    angles = jnp.linspace(0, 2 * jnp.pi, n_sta_per_ap, endpoint=False)
+
+    x_positions = ap_position[0] + radius * jnp.cos(angles)
+    y_positions = ap_position[1] + radius * jnp.sin(angles)
+
+    positions = jnp.stack((x_positions, y_positions), axis=-1)
+
+    return positions.tolist()
+
+
+def symm_residential_scenario(
+        seed: int,
+        n_steps: int,
+        x_apartments: int = 2,
+        y_apartments: int = 2,
+        n_sta_per_ap: int = 4,
+        size: Scalar = 10,
+        d_sta: int = 5,
+        sta_positioning: int = 0
+) -> StaticScenario:
+    """
+    Symmetrical version of the residential scenario. Set `sta_positioning` to 0 for ring placement
+    and 1 for circle placement of STAs. The APs are placed in the center of each apartment, and the STAs
+    are placed around the APs.
+
+    The path loss model of this scenario requires:
+
+    BREAKING_POINT = 5
+    WALL_LOSS = 5
+
+    to apply the required path loss model, set the `path_loss_fn` parameter of the `StaticScenario`
+    to `path_loss_fn=mapc_sim.utils.residential_tgax_path_loss`
+
+    """
+
+    key = jax.random.PRNGKey(seed)
+    str_repr = f"symm_residential_{seed}_{x_apartments}_{y_apartments}_{n_sta_per_ap}_{size}"
+    associations, pos, walls_pos = {}, [], []
+    rooms = {}
+    ap_pos = []
+
+    for x, y in product(range(x_apartments), range(y_apartments)):
+        ap, stas = len(pos), list(range(len(pos) + 1, len(pos) + n_sta_per_ap + 1))
+        associations[ap] = stas
+        rooms.update({node: (x, y) for node in stas + [ap]})
+
+        walls_pos.append([x * size, y * size, (x + 1) * size, y * size])
+        walls_pos.append([x * size, y * size, x * size, (y + 1) * size])
+        ap_pos.append([(x + 0.5) * size, (y + 0.5) * size])
+
+        pos_key, key = jax.random.split(key)
+        pos.append(ap_pos[len(ap_pos)-1])
+
+        if sta_positioning ==0:
+            pos += position_stations_on_ring(key, n_sta_per_ap, d_sta, ap_pos[len(ap_pos) - 1])
+        elif sta_positioning ==1:
+            pos += position_stations_in_circle(key, n_sta_per_ap, d_sta, ap_pos[len(ap_pos) - 1])
+        else:
+            raise ValueError("sta_positioning should be either 0 or 1")
+
+    walls_pos.append([x_apartments * size, 0, x_apartments * size, y_apartments * size])
+    walls_pos.append([0, y_apartments * size, x_apartments * size, y_apartments * size])
+    walls = jnp.zeros((len(pos), len(pos)))
+
+    for i, j in product(rooms.keys(), repeat=2):
+        xi, yi = rooms[i]
+        xj, yj = rooms[j]
+
+        walls = walls.at[i, j].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
+        walls = walls.at[j, i].set(jnp.abs(xi - xj) + jnp.abs(yi - yj))
+
+
+    return StaticScenario(
+        jnp.array(pos), associations, n_steps,
+        walls=walls,
+        walls_pos=jnp.array(walls_pos),
+        str_repr=str_repr
+    )
