@@ -663,7 +663,7 @@ def symm_residential_scenario(
         y_apartments: int = 2,
         n_sta_per_ap: int = 4,
         size: Scalar = 10,
-        d_sta: int = 5,
+        d_sta: Scalar = 5,
         sta_positioning: int = 0
 ) -> StaticScenario:
     """
@@ -682,7 +682,7 @@ def symm_residential_scenario(
     """
 
     key = jax.random.PRNGKey(seed)
-    str_repr = f"symm_residential_{seed}_{x_apartments}_{y_apartments}_{n_sta_per_ap}_{size}"
+    str_repr = f"symm_residential_{seed}_{x_apartments}_{y_apartments}_{n_sta_per_ap}_{size}_{d_sta}"
     associations, pos, walls_pos = {}, [], []
     rooms = {}
     ap_pos = []
