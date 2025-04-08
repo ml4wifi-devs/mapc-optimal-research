@@ -6,16 +6,19 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from mapc_research.plots.config import PLOT_PARAMS
+
 
 if __name__ == "__main__":
+    plt.rcParams.update(PLOT_PARAMS)
     random_scenario_idx = 18
 
-    with open('../mab/mean_dcf_results.json') as f:
+    with open('../dcf/mean_dcf_results.json') as f:
         dcf_results = json.load(f)[random_scenario_idx:]
         dcf_results = chain.from_iterable(dcf_results)
         dcf_results = np.asarray(list(dcf_results))
 
-    with open('../mab/mean_sr_results.json') as f:
+    with open('../dcf/mean_sr_results.json') as f:
         sr_results = json.load(f)[random_scenario_idx:]
         sr_results = chain.from_iterable(sr_results)
         sr_results = np.asarray(list(sr_results)) / dcf_results * 100
