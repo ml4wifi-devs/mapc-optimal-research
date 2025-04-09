@@ -4,9 +4,10 @@ from itertools import chain
 
 import numpy as np
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+import pandas as pd
+from tqdm import trange
 
-from mapc_research.envs.test_scenarios import INDOOR_SCENARIOS
+from mapc_research.envs.test_scenarios import ALL_SCENARIOS
 from mapc_research.plots.config import AGENT_COLORS
 
 DISTANCE_MAP = {
@@ -35,8 +36,6 @@ def plot_for_distance(distance, fairness_index):
     for i, column in enumerate(mean_iter.keys()):
         if column == "F-Optimal":
             ax.bar(xs, mean_iter[column], color="gray", width=5 * barwidth, label=column, alpha=0.5, zorder=0)
-        elif column == "T-Optimal":
-            ax.bar(xs + (i - 3) * barwidth, mean_iter[column], color=AGENT_COLORS[column], width=barwidth, label=column)
         else:
             ax.bar(xs + (i - 2) * barwidth, mean_iter[column], color=AGENT_COLORS[column], width=barwidth, label=column)
 
@@ -49,9 +48,8 @@ def plot_for_distance(distance, fairness_index):
     ax.grid(axis='y', linewidth=0.5)
 
     plt.tight_layout()
-    plt.savefig(f'fairness_residential_d{d}.pdf', bbox_inches='tight')
+    plt.savefig(f'fairness-d{d}.pdf', bbox_inches='tight')
     plt.show()
-    plt.clf()
 
 
 def jains_fairness_index(data_rate):
@@ -61,10 +59,13 @@ def jains_fairness_index(data_rate):
 
 
 if __name__ == '__main__':
-    with open('../mab/node_thr_h_mab.json') as f:
+    residential_scenario_start_idx = 3
+    residential_scenario_end_idx = 18
+
+    with open('../mab/node_thr_mab_h.json') as f:
         mab_h = json.load(f)
 
-    with open('../mab/node_thr_f_mab.json') as f:
+    with open('../mab/node_thr_mab_f.json') as f:
         mab_f = json.load(f)
 
     with open('../upper_bound/all_results.json') as f:
@@ -72,8 +73,15 @@ if __name__ == '__main__':
 
     all_results = []
 
-    for i, scenario in tqdm(enumerate(INDOOR_SCENARIOS)):
+    for i in trange(residential_scenario_start_idx, residential_scenario_end_idx):
+        scenario = ALL_SCENARIOS[i]
         stas = np.asarray(list(chain.from_iterable(scenario.associations.values())))
+
+        dcf = pd.read_csv(f'dcf/residential/{scenario.str_repr}.csv')
+        sr = pd.read_csv(f'sr/residential/{scenario.str_repr}.csv')
+
+        dcf_thr = np.asarray(dcf.groupby("Dst")["AMPDUSize"].sum() * 1e-6 / dcf['SimTime'].max() / dcf['RunNumber'].nunique())
+        sr_thr = np.asarray(sr.groupby("Dst")["AMPDUSize"].sum() * 1e-6 / sr['SimTime'].max() / sr['RunNumber'].nunique())
 
         mab_h_thr = np.asarray(mab_h[i]).mean(axis=(0, 1))[stas]
         mab_f_thr = np.asarray(mab_f[i]).mean(axis=(0, 1))[stas] if len(mab_f[i]) > 0 else np.asarray([])
@@ -91,6 +99,8 @@ if __name__ == '__main__':
         f_optimal_thr = np.asarray(list(f_optimal_thr.values()))
 
         all_results.append({
+            'DCF': jains_fairness_index(dcf_thr),
+            'SR': jains_fairness_index(sr_thr),
             'MAB': jains_fairness_index(mab_f_thr),
             'H-MAB': jains_fairness_index(mab_h_thr),
             'T-Optimal': jains_fairness_index(t_optimal_thr),

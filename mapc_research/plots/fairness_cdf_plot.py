@@ -31,11 +31,8 @@ if __name__ == '__main__':
         dcf = pd.read_csv(f'dcf/residential/{scenario.str_repr}.csv')
         sr = pd.read_csv(f'sr/residential/{scenario.str_repr}.csv')
 
-        sim_time = dcf['SimTime'].max()
-        n_runs = dcf['RunNumber'].nunique()
-
-        dcf_thr = np.asarray(dcf.groupby("Dst")["AMPDUSize"].sum() * 1e-6 / sim_time / n_runs)
-        sr_thr = np.asarray(sr.groupby("Dst")["AMPDUSize"].sum() * 1e-6 / sim_time / n_runs)
+        dcf_thr = np.asarray(dcf.groupby("Dst")["AMPDUSize"].sum() * 1e-6 / dcf['SimTime'].max() / dcf['RunNumber'].nunique())
+        sr_thr = np.asarray(sr.groupby("Dst")["AMPDUSize"].sum() * 1e-6 / sr['SimTime'].max() / sr['RunNumber'].nunique())
         mab_h_thr = np.asarray(mab_h[scenario_idx]).mean(axis=(0, 1))[stas]
         mab_f_thr = np.asarray(mab_f[scenario_idx]).mean(axis=(0, 1))[stas] if len(mab_f[scenario_idx]) > 0 else np.full(len(stas), fill_value=-1)
         t_optimal_thr = defaultdict(float)
