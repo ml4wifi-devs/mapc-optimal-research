@@ -74,4 +74,13 @@ FREE_SPACE_SCENARIOS = [
     random_scenario(seed=123, d_ap=75., d_sta=4., n_ap=5, n_sta_per_ap=3, n_steps=3000),
 ]
 
+CLUSTERED_SCENARIOS = [
+    residential_scenario(seed=110, n_steps=200000, x_apartments=3, y_apartments=4, n_sta_per_ap=4, size=20.0),
+    residential_scenario(seed=113, n_steps=20000, x_apartments=4, y_apartments=4, n_sta_per_ap=4, size=20.0),
+    symm_residential_scenario(seed=42, n_steps=2000, x_apartments=1, y_apartments=4, n_sta_per_ap=4, size=30, d_sta=2),
+    symm_residential_scenario(seed=42, n_steps=2000, x_apartments=2, y_apartments=4, n_sta_per_ap=4, size=30, d_sta=2),
+    symm_residential_scenario(seed=42, n_steps=2000, x_apartments=3, y_apartments=4, n_sta_per_ap=4, size=30, d_sta=2),
+    symm_residential_scenario(seed=42, n_steps=2000, x_apartments=4, y_apartments=4, n_sta_per_ap=4, size=30, d_sta=2)
+]
+
 ALL_SCENARIOS = EXEMPLARY_SCENARIOS + INDOOR_SCENARIOS + FREE_SPACE_SCENARIOS
