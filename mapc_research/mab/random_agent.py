@@ -22,11 +22,13 @@ class RandomMapcAgent(MapcAgent):
         self.n_nodes = len(self.access_points) + len(list(chain.from_iterable(associations.values())))
 
     def sample(self, _) -> tuple[Array, Array]:
-        sharing_ap = np.random.choice(self.access_points).item()
-        designated_station = np.random.choice(self.associations[sharing_ap]).item()
-
         tx_matrix = np.zeros((self.n_nodes, self.n_nodes), dtype=np.int32)
-        tx_matrix[sharing_ap, designated_station] = 1
         tx_power = np.zeros(self.n_nodes, dtype=np.int32)
+
+        for ap, stas in self.associations.items():
+            if np.random.rand() < 0.5:
+                self.associations[ap] = np.random.permutation(stas)
+                station = np.random.choice(stas).item()
+                tx_matrix[ap, station] = 1
 
         return tx_matrix, tx_power

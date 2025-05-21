@@ -7,11 +7,14 @@ import jax
 import lz4.frame
 import pulp as plp
 from chex import Array
+from mapc_sim.sim import network_data_rate
+from mapc_sim.constants import DEFAULT_TX_POWER
 from mapc_optimal import OptimizationType, Solver, positions_to_path_loss
 from mapc_optimal.constants import MAX_TX_POWER, DATA_RATES
 from tqdm import tqdm
 
 from mapc_research.envs.scenario_impl import *
+from mapc_research.mab.random_agent import RandomMapcAgent
 
 
 SCENARIOS = [  # Note! The values are drawn from the interval [a, b) - a is inclusive, b is exclusive!
@@ -139,31 +142,26 @@ def tx_power_to_lvl(tx_power):
     return (jnp.abs(TX_POWER_LEVELS - tx_power)).argmin().item()
 
 
-def peek_configuration(configurations, mcs_data_rates, conf_idx):
-    tx_pairs = [tx for tx in configurations['links'][conf_idx]]
-    ap = [int(ap.split('_')[1]) for ap, sta in tx_pairs]
-    sta = [int(sta.split('_')[1]) for ap, sta in tx_pairs]
-    mcs = [rate_to_mcs(mcs_data_rates, configurations['link_rates'][conf_idx][tx]) for tx in tx_pairs]
-    tx_power = [tx_power_to_lvl(configurations['tx_power'][conf_idx][tx]) for tx in tx_pairs]
-    return Configuration([TxPair(ap, sta, mcs[i], tx_power[i]) for i, (ap, sta) in enumerate(zip(ap, sta))])
+def peek_configuration(subkey, tx_matrix, pos, walls):
+    ap, sta = jnp.where(tx_matrix)
+    _, internals = jax.jit(network_data_rate)(subkey, tx_matrix, pos, None, jnp.full(tx_matrix.shape[0], DEFAULT_TX_POWER), 0.0, walls)
+    return Configuration([TxPair(ap.item(), sta.item(), internals.mcs[ap].item(), 0) for i, (ap, sta) in enumerate(zip(ap, sta))])
 
 
 def draw_configuration(n_configurations, key, dataset_item):
     associations = dataset_item.associations
-    access_points = list(associations.keys())
-    stations = list(chain.from_iterable(associations.values()))
-    path_loss = positions_to_path_loss(dataset_item.pos, dataset_item.walls)
+    pos = dataset_item.pos
+    walls = dataset_item.walls
+    solver = RandomMapcAgent(associations)
+    n = 0
 
-    solver = Solver(stations, access_points, opt_type=OptimizationType.MAX_MIN, solver=plp.CPLEX_CMD(msg=False))
-    configurations, _ = solver(path_loss, associations)
-
-    shares = jnp.array(list(configurations['shares'].values()))
-    idx_to_conf = {i: conf for i, conf in enumerate(configurations['links'])}
-
-    for _ in range(n_configurations):
+    while n < 50:
         key, subkey = jax.random.split(key)
-        idx = jax.random.choice(subkey, len(shares), p=shares).item()
-        yield peek_configuration(configurations, DATA_RATES[20], idx_to_conf[idx])
+        tx_matrix, _ = solver.sample(None)
+
+        if tx_matrix.sum() > 0:
+            n += 1
+            yield peek_configuration(subkey, tx_matrix, pos, walls)
 
 
 def draw_history(n_configurations, key, dataset):
@@ -185,5 +183,5 @@ def generate_dataset(seed, n_realizations, n_configurations, save_path):
 
 
 if __name__ == '__main__':
-    generate_dataset(seed=42, n_realizations=1000, n_configurations=50, save_path='dataset.pkl.lz4')
-    generate_dataset(seed=45, n_realizations=200, n_configurations=50, save_path='val_dataset.pkl.lz4')
+    generate_dataset(seed=42, n_realizations=1000, n_configurations=50, save_path='random_dataset.pkl.lz4')
+    generate_dataset(seed=46, n_realizations=200, n_configurations=50, save_path='random_val_dataset.pkl.lz4')
