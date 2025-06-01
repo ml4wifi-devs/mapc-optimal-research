@@ -8,7 +8,7 @@ import lz4.frame
 import pulp as plp
 from chex import Array
 from mapc_optimal import OptimizationType, Solver, positions_to_path_loss
-from mapc_optimal.constants import MAX_TX_POWER, DATA_RATES
+from mapc_sim.constants import DEFAULT_TX_POWER, DATA_RATES
 from tqdm import tqdm
 
 from mapc_research.envs.scenario_impl import *
@@ -67,7 +67,7 @@ SCENARIOS = [  # Note! The values are drawn from the interval [a, b) - a is incl
 
 N_TX_POWER_LEVELS = 4
 TX_POWER_DELTA = 3.0
-TX_POWER_LEVELS = jnp.array([MAX_TX_POWER - i * TX_POWER_DELTA for i in range(N_TX_POWER_LEVELS - 1, -1, -1)])
+TX_POWER_LEVELS = jnp.array([DEFAULT_TX_POWER - i * TX_POWER_DELTA for i in range(N_TX_POWER_LEVELS)])
 
 
 @dataclass
@@ -154,7 +154,13 @@ def draw_configuration(n_configurations, key, dataset_item):
     stations = list(chain.from_iterable(associations.values()))
     path_loss = positions_to_path_loss(dataset_item.pos, dataset_item.walls)
 
-    solver = Solver(stations, access_points, opt_type=OptimizationType.MAX_MIN, solver=plp.CPLEX_CMD(msg=False))
+    solver = Solver(
+        stations, access_points,
+        max_tx_power=DEFAULT_TX_POWER,
+        min_tx_power=DEFAULT_TX_POWER - (N_TX_POWER_LEVELS - 1) * TX_POWER_DELTA,
+        opt_type=OptimizationType.MAX_MIN,
+        solver=plp.CPLEX_CMD(msg=False)
+    )
     configurations, _ = solver(path_loss, associations)
 
     shares = jnp.array(list(configurations['shares'].values()))
