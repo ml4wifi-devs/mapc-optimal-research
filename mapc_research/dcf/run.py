@@ -27,7 +27,7 @@ def single_run(
 ) -> None:
     key, key_channel = jax.random.split(key)
     des_env = simpy.Environment()
-    channel = Channel(key_channel, spatial_reuse, scenario.pos, walls=scenario.walls)
+    channel = Channel(key_channel, spatial_reuse, scenario.channel_width, scenario.pos, walls=scenario.walls)
     aps: dict[int, AccessPoint] = {}
 
     for ap in scenario.associations:
