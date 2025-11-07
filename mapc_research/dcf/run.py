@@ -34,7 +34,7 @@ def single_run(
         key, key_ap = jax.random.split(key)
         clients = jnp.array(scenario.associations[ap])
         tx_power = scenario.tx_power[ap].item()
-        aps[ap] = AccessPoint(key_ap, ap, scenario.pos, tx_power, None, clients, channel, des_env, logger)
+        aps[ap] = AccessPoint(key_ap, ap, scenario.pos, tx_power, clients, channel, des_env, logger)
         aps[ap].start_operation(run)
     
     des_env.run(until=warmup_length + simulation_length)
