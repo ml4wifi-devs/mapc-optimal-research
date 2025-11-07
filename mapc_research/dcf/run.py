@@ -1,5 +1,6 @@
 import os
 os.environ['JAX_ENABLE_X64'] = 'True'
+os.environ['JAX_PLATFORM_NAME'] = 'cpu'
 
 import json
 import logging

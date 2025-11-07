@@ -1,6 +1,6 @@
 import os
 os.environ['JAX_ENABLE_X64'] = 'True'
-os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
+os.environ['JAX_PLATFORM_NAME'] = 'cpu'
 
 import logging
 from time import time
