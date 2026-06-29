@@ -51,6 +51,7 @@ class StaticScenario(Scenario):
             n_steps: int = float('inf'),
             default_tx_power: Scalar = DEFAULT_TX_POWER,
             sigma: Scalar = DEFAULT_SIGMA,
+            nakagami_m: float | None = None,
             walls: Optional[Array] = None,
             walls_pos: Optional[Array] = None,
             channel_width: int = None,
@@ -66,6 +67,7 @@ class StaticScenario(Scenario):
         self.tx_power_delta = tx_power_delta
         self.n_steps = n_steps
         self.sigma = sigma
+        self.nakagami_m = nakagami_m
 
         self.data_rate_fn = partial(
             network_data_rate,
@@ -73,7 +75,8 @@ class StaticScenario(Scenario):
             sigma=self.sigma,
             walls=self.walls,
             path_loss_fn=self.path_loss_fn,
-            channel_width=self.channel_width
+            channel_width=self.channel_width,
+            nakagami_m=self.nakagami_m,
         )
         self.normalize_reward = DATA_RATES[self.channel_width][-1].item()
 

@@ -28,7 +28,7 @@ def toy_scenario_1(d: Scalar = 20., n_steps: int = 600, channel_width: int = Non
         4: [3, 5]
     }
 
-    return StaticScenario(pos, associations, n_steps, str_repr="toy_scenario_1", channel_width=channel_width)
+    return StaticScenario(pos, associations, n_steps, str_repr="toy_scenario_1", channel_width=channel_width, **kwargs)
 
 
 def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., n_steps: int = 600, channel_width: int = None, **kwargs) -> StaticScenario:
@@ -68,7 +68,7 @@ def toy_scenario_2(d_ap: Scalar = 50., d_sta: Scalar = 2., n_steps: int = 600, c
         3: [16, 17, 18, 19]
     }
 
-    return StaticScenario(pos, associations, n_steps, str_repr="toy_scenario_2", channel_width=channel_width)
+    return StaticScenario(pos, associations, n_steps, str_repr="toy_scenario_2", channel_width=channel_width, **kwargs)
 
 
 def small_office_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int = float('inf'), channel_width: int = None, **kwargs) -> StaticScenario:
@@ -154,7 +154,7 @@ def small_office_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int = float('inf
         [d_ap / 2, d_ap / 2, d_ap / 2, d_ap + d_ap / 2],
     ])
 
-    return StaticScenario(pos, associations, n_steps, walls=walls, walls_pos=walls_pos, str_repr=str_repr, channel_width=channel_width)
+    return StaticScenario(pos, associations, n_steps, walls=walls, walls_pos=walls_pos, str_repr=str_repr, channel_width=channel_width, **kwargs)
 
 
 def openwifi_scenario(channel_width: int = None):
@@ -192,7 +192,8 @@ def random_scenario(
         n_sta_per_ap: int,
         n_steps: int = float('inf'),
         randomize: bool = True,
-        channel_width: int = None
+        channel_width: int = None,
+        **kwargs
 ) -> Scenario:
     def _draw_positions(key: PRNGKey) -> Array:
         ap_key, key = jax.random.split(key)
@@ -219,7 +220,7 @@ def random_scenario(
     if randomize:
         return DynamicScenario(pos_first, associations, n_steps, pos_sec=pos_sec, switch_steps=[n_steps // 2], str_repr=str_repr, channel_width=channel_width)
     else:
-        return StaticScenario(pos_first, associations, n_steps, str_repr=str_repr, channel_width=channel_width)
+        return StaticScenario(pos_first, associations, n_steps, str_repr=str_repr, channel_width=channel_width, **kwargs)
 
 
 def residential_scenario(
@@ -229,7 +230,8 @@ def residential_scenario(
         n_sta_per_ap: int = 2,
         size: Scalar = 10,
         n_steps: int = float('inf'),
-        channel_width: int = None
+        channel_width: int = None,
+        **kwargs
 ) -> StaticScenario:
     """
     Implementation of the Residential Scenario from S. Merlin et al. "TGax Simulation Scenarios", IEEE 802.11-14/0980r16
@@ -285,7 +287,8 @@ def residential_scenario(
         walls=walls,
         walls_pos=jnp.array(walls_pos),
         str_repr=str_repr,
-        channel_width=channel_width
+        channel_width=channel_width,
+        **kwargs
     )
 
 
@@ -317,7 +320,7 @@ def hidden_station_scenario(d: Scalar, n_steps: int = float('inf'), channel_widt
         3: [2]
     }
 
-    return StaticScenario(pos, associations, n_steps, str_repr=f"hidden_station_{d}", channel_width=channel_width)
+    return StaticScenario(pos, associations, n_steps, str_repr=f"hidden_station_{d}", channel_width=channel_width, **kwargs)
 
 
 def flow_in_the_middle_scenario(d: Scalar, n_steps: int = float('inf'), channel_width: int = None, **kwargs) -> StaticScenario:
@@ -343,7 +346,7 @@ def flow_in_the_middle_scenario(d: Scalar, n_steps: int = float('inf'), channel_
         4: [5]
     }
 
-    return StaticScenario(pos, associations, n_steps, str_repr=f"flow_in_the_middle_{d}", channel_width=channel_width)
+    return StaticScenario(pos, associations, n_steps, str_repr=f"flow_in_the_middle_{d}", channel_width=channel_width, **kwargs)
 
 
 def dense_point_scenario(n_ap: int, n_associations: int, n_steps: int = float('inf'), channel_width: int = None, **kwargs) -> StaticScenario:
@@ -355,7 +358,7 @@ def dense_point_scenario(n_ap: int, n_associations: int, n_steps: int = float('i
 
     associations = {i: [n_ap + i * n_associations + j for j in range(n_associations)] for i in range(n_ap)}
 
-    return StaticScenario(pos, associations, n_steps, str_repr=f"dense_point_{n_ap}_{n_associations}", channel_width=channel_width)
+    return StaticScenario(pos, associations, n_steps, str_repr=f"dense_point_{n_ap}_{n_associations}", channel_width=channel_width, **kwargs)
 
 
 def spatial_reuse_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int = 600, channel_width: int = None, **kwargs) -> StaticScenario:
@@ -375,7 +378,7 @@ def spatial_reuse_scenario(d_ap: Scalar, d_sta: Scalar, n_steps: int = 600, chan
         2: [3]
     }
 
-    return StaticScenario(pos, associations, n_steps, str_repr="spatial_reuse_scenario", channel_width=channel_width)
+    return StaticScenario(pos, associations, n_steps, str_repr="spatial_reuse_scenario", channel_width=channel_width, **kwargs)
 
 
 def test_scenario(scale: float = 1.0, channel_width: int = None, **kwargs) -> StaticScenario:
@@ -412,7 +415,7 @@ def test_scenario(scale: float = 1.0, channel_width: int = None, **kwargs) -> St
         [-2.0, 0.0, 2.0, 0.0]
     ])
 
-    return StaticScenario(pos, associations, walls_pos=walls_pos, channel_width=channel_width)
+    return StaticScenario(pos, associations, walls_pos=walls_pos, channel_width=channel_width, **kwargs)
 
 
 def enterprise_scenario(
@@ -528,7 +531,8 @@ def indoor_small_bsss_scenario(
         frequency_reuse: int = 1,
         bss_radius: int = 10,
         n_steps: int = float('inf'),
-        channel_width: int = None
+        channel_width: int = None,
+        **kwargs
 ) -> StaticScenario:
     """
     Implementation of the Indoor Small BSSs Scenario from S. Merlin et al. "TGax Simulation Scenarios", IEEE 802.11-14/0980r16
@@ -634,7 +638,8 @@ def indoor_small_bsss_scenario(
         n_steps=n_steps,
         walls=walls,
         str_repr=str_repr,
-        channel_width=channel_width
+        channel_width=channel_width,
+        **kwargs
     )
 
 
@@ -672,7 +677,8 @@ def symm_residential_scenario(
         size: Scalar = 10,
         d_sta: Scalar = 5,
         sta_positioning: int = 0,
-        channel_width: int = None
+        channel_width: int = None,
+        **kwargs
 ) -> StaticScenario:
     """
     Symmetrical version of the residential scenario. Set `sta_positioning` to 0 for ring placement
@@ -731,5 +737,6 @@ def symm_residential_scenario(
         walls=walls,
         walls_pos=jnp.array(walls_pos),
         str_repr=str_repr,
-        channel_width=channel_width
+        channel_width=channel_width,
+        **kwargs
     )
