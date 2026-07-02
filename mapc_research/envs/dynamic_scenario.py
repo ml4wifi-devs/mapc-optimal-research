@@ -90,7 +90,16 @@ class DynamicScenario(Scenario):
 
         self.tx_power_first = jnp.full(pos.shape[0], tx_power)
         self.scenario_first = StaticScenario(
-            pos, associations, n_steps, tx_power, sigma, walls, walls_pos, channel_width, tx_power_delta
+            pos,
+            associations,
+            n_steps,
+            default_tx_power=tx_power,
+            sigma=sigma,
+            walls=walls,
+            walls_pos=walls_pos,
+            channel_width=channel_width,
+            tx_power_delta=tx_power_delta,
+            path_loss_fn=path_loss_fn
         )
         self.data_rate_fn_first = partial(
             network_data_rate,
@@ -113,7 +122,16 @@ class DynamicScenario(Scenario):
 
         self.tx_power_sec = jnp.full(pos_sec.shape[0], tx_power_sec)
         self.scenario_sec = StaticScenario(
-            pos_sec, associations, n_steps, tx_power_sec, sigma_sec, walls_sec, walls_pos_sec, channel_width_sec, tx_power_delta
+            pos_sec,
+            associations,
+            n_steps,
+            default_tx_power=tx_power_sec,
+            sigma=sigma_sec,
+            walls=walls_sec,
+            walls_pos=walls_pos_sec,
+            channel_width=channel_width_sec,
+            tx_power_delta=tx_power_delta,
+            path_loss_fn=path_loss_fn
         )
         self.data_rate_fn_sec = partial(
             network_data_rate,
@@ -177,6 +195,8 @@ class DynamicScenario(Scenario):
 
     def reset(self) -> None:
         self.data_rate_fn = self.data_rate_fn_first
+        self.tx_power = self.tx_power_first
+        self.normalize_reward = self.normalize_reward_first
         self.step = 0
 
     def switch(self) -> None:
