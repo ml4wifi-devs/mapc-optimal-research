@@ -25,7 +25,7 @@ class ScenarioClassTestCase(unittest.TestCase):
     def test_simple_sim(self):
         # Define test-case key and scenario
         key = jax.random.PRNGKey(42)
-        scenario = toy_scenario_1(d=10., mcs=7)
+        scenario = toy_scenario_1(d=10.)
 
         # Transmission matrices indicating which node is transmitting to which node:
         # - in this example, AP A is transmitting to STA 1
