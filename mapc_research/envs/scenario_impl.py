@@ -223,6 +223,61 @@ def random_scenario(
         return StaticScenario(pos_first, associations, n_steps, str_repr=str_repr, channel_width=channel_width, **kwargs)
 
 
+def clustered_scenario(
+        seed: int,
+        n_ap: int,
+        max_cluster: int = 3,
+        d_ap: Scalar = 7.,
+        d_cluster: Scalar = 75.,
+        d_sta: Scalar = 3.,
+        n_sta_per_ap: int = 2,
+        n_steps: int = float('inf'),
+        channel_width: int = None,
+        **kwargs
+) -> StaticScenario:
+    """
+    APs randomly split into distant clusters of unequal size. The APs of a cluster are close enough to
+    interfere with each other, while the clusters are too distant to interfere. The contention is thus
+    heterogeneous: the stations of the small clusters are not limited by the contention which limits
+    the stations of the large ones, so the criteria which only maximize the worst throughput leave
+    a part of the time unused.
+    """
+
+    key = jax.random.PRNGKey(seed)
+    str_repr = f"clustered_{seed}_{n_ap}_{max_cluster}_{d_ap}_{d_cluster}_{d_sta}_{n_sta_per_ap}"
+
+    # random sizes of the clusters: a single-AP cluster, which is never limited by the contention,
+    # followed by the clusters of at least two APs, whose stations always compete with each other
+    sizes, remaining = ([1], n_ap - 1) if n_ap > 2 else ([n_ap], 0)
+
+    while remaining > 0:
+        size_key, key = jax.random.split(key)
+        size = min(int(jax.random.randint(size_key, (), 2, max_cluster + 1)), remaining)
+        sizes.append(size)
+        remaining -= size
+
+    ap_pos, sta_pos, associations = [], [], {}
+
+    for cluster, size in enumerate(sizes):
+        pos_key, key = jax.random.split(key)
+        center = jnp.array([cluster * d_cluster, 0.])
+        ap_pos += (center + jax.random.uniform(pos_key, (size, 2), minval=-d_ap, maxval=d_ap)).tolist()
+
+    for ap, pos in enumerate(ap_pos):
+        sta_key, key = jax.random.split(key)
+        associations[ap] = list(range(len(ap_pos) + ap * n_sta_per_ap, len(ap_pos) + (ap + 1) * n_sta_per_ap))
+        sta_pos += (jnp.array(pos) + jax.random.uniform(sta_key, (n_sta_per_ap, 2), minval=-d_sta, maxval=d_sta)).tolist()
+
+    return StaticScenario(
+        jnp.array(ap_pos + sta_pos),
+        associations,
+        n_steps=n_steps,
+        str_repr=str_repr,
+        channel_width=channel_width,
+        **kwargs
+    )
+
+
 def residential_scenario(
         seed: int,
         x_apartments: int = 10,
