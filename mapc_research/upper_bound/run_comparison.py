@@ -119,7 +119,7 @@ def run(scenario, opt_type: OptimizationType, method: str, seed: int, timeout: i
         channel_width=scenario.channel_width, opt_type=opt_type, max_iterations=500,
         pricing_type=PricingType.MILP if method == 'milp' else PricingType.TABU,
         pricing_kwargs={'seed': seed, 'evaluator': evaluator if method == 'tabu_sim' else None},
-        solver=plp.CPLEX_CMD(msg=False, options=['set mip tolerances integrality 0'], threads=16)
+        solver=plp.CPLEX_CMD(msg=False, options=['set mip tolerances integrality 0', 'set emphasis numerical y'], threads=16)
     )
 
     signal.alarm(timeout)
@@ -163,7 +163,7 @@ def run(scenario, opt_type: OptimizationType, method: str, seed: int, timeout: i
 
 if __name__ == '__main__':
     args = ArgumentParser()
-    args.add_argument('-t', '--timeout', type=int, default=3600)
+    args.add_argument('-t', '--timeout', type=int, default=14400)
     args.add_argument('-o', '--output', type=str, default='comparison_results.json')
     args = args.parse_args()
 
